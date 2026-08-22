@@ -1,0 +1,121 @@
+import { TicketXMovie } from '@/types/movie';
+
+export const movies: TicketXMovie[] = [
+  {
+    id: "debba-debba",
+    title: "Debba Debba",
+    poster: "/posters/debba-debba.jpg",
+    backdrop: "/posters/debba-debba.jpg",
+    language: "Telugu",
+    genres: ["Action", "Comedy", "Drama"],
+    duration: "2h 20m",
+    rating: 8.7,
+    certificate: "U/A",
+    releaseDate: "2026-08-22",
+    description: "An action-packed commercial mass entertainer following a fearless protagonist taking on high-stakes challenges."
+  },
+  {
+    id: "irumudi",
+    title: "Irumudi",
+    poster: "/posters/irumudi.jpg",
+    backdrop: "/posters/irumudi.jpg",
+    language: "Telugu",
+    genres: ["Drama", "Action"],
+    duration: "2h 25m",
+    rating: 8.8,
+    certificate: "U/A",
+    releaseDate: "2026-08-20",
+    description: "A devotional action thriller following a sacred journey filled with high stakes, destiny, and deep emotions."
+  },
+  {
+    id: "vishwanath-and-sons",
+    title: "Vishwanath and Sons",
+    poster: "/posters/vishwanath-and-sons.jpg",
+    backdrop: "/posters/vishwanath-and-sons.jpg",
+    language: "Telugu",
+    genres: ["Family", "Drama"],
+    duration: "2h 15m",
+    rating: 8.4,
+    certificate: "U",
+    releaseDate: "2026-08-15",
+    description: "A heartwarming multi-generational family drama exploring bonds, legacy, and shared dreams across generations."
+  },
+  {
+    id: "insidious-out-of-the-further",
+    title: "Insidious: Out of the Further",
+    poster: "/posters/insidious-out-of-the-further.jpg",
+    backdrop: "/posters/insidious-out-of-the-further.jpg",
+    language: "English / Telugu",
+    genres: ["Horror", "Mystery"],
+    duration: "1h 52m",
+    rating: 7.9,
+    certificate: "A",
+    releaseDate: "2026-08-14",
+    description: "The dark entity from the Further attempts to cross into the waking realm in this terrifying horror chapter."
+  },
+  {
+    id: "paw-patrol-the-dino-movie",
+    title: "PAW Patrol: The Dino Movie",
+    poster: "/posters/paw-patrol-the-dino-movie.jpg",
+    backdrop: "/posters/paw-patrol-the-dino-movie.jpg",
+    language: "English / Telugu",
+    genres: ["Animation", "Adventure", "Family"],
+    duration: "1h 35m",
+    rating: 8.1,
+    certificate: "U",
+    releaseDate: "2026-08-08",
+    description: "The heroic pups embark on a prehistoric rescue mission when a lost dinosaur land needs their help."
+  },
+  {
+    id: "fight-maha",
+    title: "Fight Maha",
+    poster: "/posters/fight-maha.jpg",
+    backdrop: "/posters/fight-maha.jpg",
+    language: "Telugu",
+    genres: ["Action", "Thriller"],
+    duration: "2h 10m",
+    rating: 8.0,
+    certificate: "U/A",
+    releaseDate: "2026-08-21",
+    description: "An intense martial arts action drama showcasing an underdog fighter rising against all odds."
+  },
+  {
+    id: "khalifa-the-ruler",
+    title: "Khalifa: The Ruler",
+    poster: "/posters/khalifa-the-ruler.jpg",
+    backdrop: "/posters/khalifa-the-ruler.jpg",
+    language: "Telugu / Hindi",
+    genres: ["Action", "Crime", "Drama"],
+    duration: "2h 38m",
+    rating: 8.9,
+    certificate: "U/A",
+    releaseDate: "2026-08-23",
+    description: "An epic saga chronicling the rise of a visionary leader ruling the underworld with honor."
+  },
+  {
+    id: "dc",
+    title: "DC",
+    poster: "/posters/dc.jpg",
+    backdrop: "/posters/dc.jpg",
+    language: "Telugu / English",
+    genres: ["Superhero", "Action"],
+    duration: "2h 30m",
+    rating: 8.3,
+    certificate: "U/A",
+    releaseDate: "2026-08-22",
+    description: "An explosive superhero spectacle following legendary heroes fighting for justice and survival."
+  },
+  {
+    id: "hushar-pittalu",
+    title: "Hushar Pittalu",
+    poster: "/posters/hushar-pittalu.jpg",
+    backdrop: "/posters/hushar-pittalu.jpg",
+    language: "Telugu",
+    genres: ["Comedy", "Drama"],
+    duration: "2h 18m",
+    rating: 8.2,
+    certificate: "U/A",
+    releaseDate: "2026-08-18",
+    description: "A hilarious youth comedy about a group of witty friends navigating chaotic situations and life goals."
+  }
+];
