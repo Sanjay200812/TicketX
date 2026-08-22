@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { TicketXSeatLayout, SeatSection } from '@/types/seatLayouts';
 import { Seat, SeatStatus } from '@/types/seat';
 import { SeatItem } from './SeatItem';
 import { SeatLegend } from './SeatLegend';
 import { CinemaScreen } from './CinemaScreen';
-import { TheatreHallMiniMap } from './TheatreHallMiniMap';
+import { TemporaryMinimap } from './TemporaryMinimap';
 import { calculateUsableCapacity } from '@/lib/validateData';
 import { useAuth } from '@/context/AuthContext';
 import { DoorOpen } from 'lucide-react';
@@ -26,24 +26,27 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
   const [realtimeBooked, setRealtimeBooked] = useState<Set<string>>(new Set());
   const [realtimeHeld, setRealtimeHeld] = useState<Set<string>>(new Set());
 
-  // Requirement 9: Category Standardization Rule
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Requirement 11, 12, 13: Category Standardization & Swapped Order Rule
+  // Top: GOLD (₹295) | Middle: SILVER (₹150) | Bottom: ON LAND LUXURY (NRT Only)
   const isNRT = layout.locationId === 'nrt';
 
-  const normalizedSections: SeatSection[] = layout.sections.map((sec) => {
+  const rawSections: SeatSection[] = layout.sections.map((sec) => {
     const key = sec.categoryKey;
     const catLower = (sec.name || '').toLowerCase();
 
     if (isNRT) {
       // NRT Theatres: Silver ₹150, Gold ₹295, On Land Luxury preserved
       if (catLower.includes('luxury') || catLower.includes('land') || key === 'onLand') {
-        return { ...sec, name: 'On Land Luxury Recliner' };
+        return { ...sec, name: 'On Land Luxury Recliner', categoryKey: 'onLand' };
       }
       if (catLower.includes('gold') || key === 'gold') {
-        return { ...sec, name: 'Gold Class', price: 295 };
+        return { ...sec, name: 'Gold Class', price: 295, categoryKey: 'gold' };
       }
-      return { ...sec, name: 'Silver Class', price: 150 };
+      return { ...sec, name: 'Silver Class', price: 150, categoryKey: 'silver' };
     } else {
-      // Other Cities: ONLY 2 Categories (Silver ₹150 / Gold ₹295)
+      // Other Cities: ONLY 2 Categories (Gold ₹295 Top / Silver ₹150 Middle)
       if (catLower.includes('gold') || key === 'gold' || catLower.includes('luxury') || catLower.includes('land') || key === 'onLand') {
         return { ...sec, name: 'Gold Class', price: 295, categoryKey: 'gold' };
       }
@@ -51,10 +54,19 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
     }
   });
 
+  // Sort sections strictly in required vertical order: GOLD (Top) -> SILVER (Middle) -> ON LAND LUXURY (Bottom)
+  const normalizedSections: SeatSection[] = [...rawSections].sort((a, b) => {
+    const orderScore = (s: SeatSection) => {
+      const name = s.name.toLowerCase();
+      if (name.includes('gold')) return 1;
+      if (name.includes('silver')) return 2;
+      if (name.includes('land') || name.includes('luxury')) return 3;
+      return 4;
+    };
+    return orderScore(a) - orderScore(b);
+  });
+
   const hasLuxury = isNRT && normalizedSections.some((s) => s.name.toLowerCase().includes('land') || s.name.toLowerCase().includes('luxury'));
-  const silverSec = normalizedSections.find((s) => s.name.toLowerCase().includes('silver'));
-  const goldSec = normalizedSections.find((s) => s.name.toLowerCase().includes('gold'));
-  const luxurySec = normalizedSections.find((s) => s.name.toLowerCase().includes('luxury') || s.name.toLowerCase().includes('land'));
 
   // Real-time polling sync for seat availability
   useEffect(() => {
@@ -94,22 +106,16 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
   const availableCount = Math.max(0, totalCapacity - totalOccupied - selectedSeats.length);
 
   return (
-    <div className="w-full max-w-5xl mx-auto flex flex-col items-center select-none">
-      {/* Whole Hall Mini-Map Overview (Requirement 7 - Reference Image 2 Style) */}
-      <TheatreHallMiniMap
-        theatreName={layout.theatreName}
-        hasLuxury={hasLuxury}
-        silverPrice={silverSec?.price || 150}
-        goldPrice={goldSec?.price || 295}
-        luxuryPrice={luxurySec?.price || 777}
-      />
+    <div className="w-full max-w-5xl mx-auto flex flex-col items-center select-none relative">
+      {/* Requirement 19, 20, 21: Floating Temporary Navigation Minimap */}
+      <TemporaryMinimap containerRef={scrollContainerRef} hasLuxury={hasLuxury} />
 
       {/* Layout Header Info & Capacity Display */}
       <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3 mb-6 pb-4 border-b border-white/10 text-xs">
         <div className="flex items-center gap-3">
           <span className="font-bold text-white text-lg md:text-xl font-heading">{layout.theatreName}</span>
           <span className="px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 font-bold text-[11px]">
-            {isNRT ? 'Silver • Gold • Luxury' : 'Silver ₹150 • Gold ₹295'}
+            {isNRT ? 'Gold ₹295 • Silver ₹150 • Luxury' : 'Gold ₹295 • Silver ₹150'}
           </span>
         </div>
 
@@ -130,21 +136,23 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
       {/* Legend */}
       <SeatLegend sections={normalizedSections} />
 
-      {/* AUDITORIUM THEATRE ENTRANCE (Requirement 8) */}
-      <div className="w-full max-w-4xl flex items-center justify-between mb-4 px-2">
-        <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/30 text-xs font-bold font-mono shadow-md">
+      {/* AUDITORIUM THEATRE ENTRANCE CORRIDOR (Requirement 14, 16, 17 - EXIT MARKER REMOVED) */}
+      <div className="w-full max-w-4xl flex items-center justify-start mb-4 px-2">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/30 text-xs font-bold font-mono shadow-md">
           <DoorOpen className="w-4 h-4 text-amber-400" />
-          <span>THEATRE ENTRANCE / ENTRY →</span>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-secondary/40 text-muted-foreground border border-white/5 text-xs font-bold font-mono">
-          <span>← EXIT</span>
+          <span>← ENTRY</span>
         </div>
       </div>
 
-      {/* SEATING MAP RENDERER */}
-      <div className="w-full space-y-10 overflow-x-auto hide-scrollbar py-4">
+      {/* SEATING MAP SCROLL CONTAINER (ORDER: GOLD TOP -> SILVER MIDDLE -> LUXURY BOTTOM) */}
+      <div
+        ref={scrollContainerRef}
+        className="w-full space-y-10 overflow-x-auto hide-scrollbar py-4 border border-white/5 rounded-2xl p-4 bg-black/40"
+      >
         {normalizedSections.map((section, secIdx) => {
           const isLuxury = section.name.toLowerCase().includes('luxury') || section.name.toLowerCase().includes('land');
+          const isGold = section.name.toLowerCase().includes('gold');
+
           return (
             <motion.div
               key={section.id}
@@ -161,7 +169,7 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
                     className={`text-xs font-black uppercase tracking-widest px-5 py-1 rounded-full border flex items-center gap-2 shadow-lg ${
                       isLuxury
                         ? 'bg-gradient-to-r from-rose-950/80 via-rose-900/40 to-rose-950/80 text-rose-300 border-rose-500/50'
-                        : section.name.toLowerCase().includes('gold')
+                        : isGold
                         ? 'bg-amber-950/60 text-amber-300 border-amber-500/40'
                         : 'bg-slate-900/80 text-slate-200 border-slate-400/40'
                     }`}
@@ -215,9 +223,9 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
                       </div>
                     )}
 
-                    {/* Aisle Break */}
+                    {/* Aisle Corridor Break */}
                     {rowGroup.leftSeats && rowGroup.centerSeats && (
-                      <div className="w-5 sm:w-8 text-[8px] text-center text-muted-foreground/30 font-mono select-none">
+                      <div className="w-6 sm:w-10 text-[8px] text-center text-muted-foreground/30 font-mono select-none">
                         AISLE
                       </div>
                     )}
@@ -253,9 +261,9 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
                       </div>
                     )}
 
-                    {/* Aisle Break */}
+                    {/* Aisle Corridor Break */}
                     {((rowGroup.centerSeats && rowGroup.rightSeats) || (rowGroup.leftSeats && rowGroup.rightSeats && !rowGroup.centerSeats)) && (
-                      <div className="w-5 sm:w-8 text-[8px] text-center text-muted-foreground/30 font-mono select-none">
+                      <div className="w-6 sm:w-10 text-[8px] text-center text-muted-foreground/30 font-mono select-none">
                         AISLE
                       </div>
                     )}

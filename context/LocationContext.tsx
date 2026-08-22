@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { TicketXLocation, City } from '@/types/location';
 import { locations } from '@/data/locations';
+import { useAuth } from '@/context/AuthContext';
 
 export const SUPPORTED_LOCATIONS: TicketXLocation[] = locations;
 
@@ -35,29 +36,39 @@ interface LocationContextType {
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
 
 export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [selectedLocation, setSelectedLocation] = useState<TicketXLocation>(SUPPORTED_LOCATIONS[0]);
-  const [savedLocationIds, setSavedLocationIds] = useState<string[]>(['guntur', 'vijayawada', 'nrt']);
+  // Requirement 1, 4: Default saved locations MUST BE EMPTY (no default pre-populated cities)
+  const [savedLocationIds, setSavedLocationIds] = useState<string[]>([]);
   const [isCityModalOpen, setIsCityModalOpen] = useState(false);
 
+  const storageKey = user?.id ? `ticketx_saved_locations_${user.id}` : 'ticketx_saved_locations_guest';
+
   useEffect(() => {
-    const saved = localStorage.getItem('ticketx_location_id');
-    if (saved) {
-      const match = SUPPORTED_LOCATIONS.find((l) => l.id === saved);
+    // Load last selected city
+    const savedLoc = localStorage.getItem('ticketx_location_id');
+    if (savedLoc) {
+      const match = SUPPORTED_LOCATIONS.find((l) => l.id === savedLoc);
       if (match) {
         setSelectedLocation(match);
       }
     }
 
-    const savedList = localStorage.getItem('ticketx_saved_locations');
+    // Requirement 3: User-controlled saved locations per user account
+    const savedList = localStorage.getItem(storageKey);
     if (savedList) {
       try {
         setSavedLocationIds(JSON.parse(savedList));
       } catch (e) {
         console.error(e);
+        setSavedLocationIds([]);
       }
+    } else {
+      setSavedLocationIds([]);
     }
-  }, []);
+  }, [storageKey]);
 
+  // Requirement 2: Selecting a city DOES NOT automatically save it
   const selectLocation = (loc: TicketXLocation) => {
     setSelectedLocation(loc);
     localStorage.setItem('ticketx_location_id', loc.id);
@@ -69,11 +80,12 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     selectLocation(match);
   };
 
+  // Requirement 2: Saving MUST be an explicit user action
   const toggleSaveLocation = (locationId: string) => {
     setSavedLocationIds((prev) => {
       const isSaved = prev.includes(locationId);
       const updated = isSaved ? prev.filter((id) => id !== locationId) : [...prev, locationId];
-      localStorage.setItem('ticketx_saved_locations', JSON.stringify(updated));
+      localStorage.setItem(storageKey, JSON.stringify(updated));
       return updated;
     });
   };
@@ -81,7 +93,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const removeSavedLocation = (locationId: string) => {
     setSavedLocationIds((prev) => {
       const updated = prev.filter((id) => id !== locationId);
-      localStorage.setItem('ticketx_saved_locations', JSON.stringify(updated));
+      localStorage.setItem(storageKey, JSON.stringify(updated));
       return updated;
     });
   };

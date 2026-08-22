@@ -31,7 +31,7 @@ function LoginContent() {
   const [resendTimer, setResendTimer] = useState(30);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Google Account Chooser Modal State (Requirement 17, 18, 45)
+  // Google Account Chooser Modal State (Requirement 6, 7, 8)
   const [showGoogleChooser, setShowGoogleChooser] = useState(false);
   const [customGoogleEmail, setCustomGoogleEmail] = useState('');
 
@@ -54,6 +54,16 @@ function LoginContent() {
     }
     return () => clearInterval(timer);
   }, [step, resendTimer]);
+
+  // Requirement 34, 35: OTP Input Autofocus - Automatically focus Box 1 when OTP screen mounts
+  useEffect(() => {
+    if (step === 'otp') {
+      const timer = setTimeout(() => {
+        otpInputsRef.current[0]?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -106,6 +116,7 @@ function LoginContent() {
       setStep('otp');
       setResendTimer(30);
 
+      // Requirement 40: Toast displays ONLY "Verification code sent"
       triggerToast('Verification code sent');
     }, 400);
   };
@@ -126,6 +137,7 @@ function LoginContent() {
     }
   };
 
+  // Requirement 37: Single digit typing auto-advances to next box
   const handleOtpChange = (index: number, value: string) => {
     const cleanVal = value.replace(/\D/g, '');
     if (!cleanVal && value) return;
@@ -139,6 +151,7 @@ function LoginContent() {
     }
   };
 
+  // Requirement 39: Paste 6-digit OTP fills all fields automatically
   const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
@@ -387,6 +400,7 @@ function LoginContent() {
                         }}
                         type="text"
                         inputMode="numeric"
+                        autoComplete="one-time-code"
                         maxLength={1}
                         value={digit}
                         onKeyDown={(e) => handleOtpKeyDown(idx, e)}
@@ -441,7 +455,7 @@ function LoginContent() {
           </span>
         </div>
 
-        {/* 3. CONTINUE WITH GOOGLE (Requirement 17, 18, 45) */}
+        {/* 3. CONTINUE WITH GOOGLE (Requirements 6, 7, 8) */}
         <Button
           variant="outline"
           onClick={handleGoogleClick}
@@ -470,7 +484,7 @@ function LoginContent() {
         </Button>
       </div>
 
-      {/* REAL GOOGLE ACCOUNT CHOOSER DIALOG (Requirement 17, 18, 45) */}
+      {/* REAL GOOGLE ACCOUNT CHOOSER DIALOG */}
       <AnimatePresence>
         {showGoogleChooser && (
           <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">

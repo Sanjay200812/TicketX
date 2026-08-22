@@ -23,8 +23,8 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${inter.variable} ${spaceGrotesk.variable} font-sans min-h-screen bg-background text-foreground flex flex-col`}>
-        <LocationProvider>
-          <AuthProvider>
+        <AuthProvider>
+          <LocationProvider>
             <FavoritesProvider>
               <Navbar />
               <main className="flex-1">
@@ -32,8 +32,8 @@ export default function RootLayout({
               </main>
               <Footer />
             </FavoritesProvider>
-          </AuthProvider>
-        </LocationProvider>
+          </LocationProvider>
+        </AuthProvider>
       </body>
     </html>
   );
