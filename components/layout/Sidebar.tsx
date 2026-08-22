@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -59,6 +59,19 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user, logout } = useAuth();
   const { location, setIsCityModalOpen } = useLocation();
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ Theatres: false, Locations: false });
+
+  // Escape Key press listener (Requirement 1)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   const toggleSection = (label: string) => {
     setExpandedSections((prev) => ({ ...prev, [label]: !prev[label] }));

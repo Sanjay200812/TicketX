@@ -24,7 +24,7 @@ function LoginContent() {
   const [name, setName] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  // Phone form states
+  // Phone form states (Requirements 2-10)
   const [phone, setPhone] = useState('');
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [otp, setOtp] = useState<string[]>(['', '', '', '', '', '']);
@@ -51,12 +51,12 @@ function LoginContent() {
     return () => clearInterval(timer);
   }, [step, resendTimer]);
 
-  // Requirement 34, 35: OTP Input Autofocus - Automatically focus Box 1 when OTP screen mounts
+  // Requirement 11: OTP Input Autofocus - Automatically focus Box 1 immediately when OTP screen mounts
   useEffect(() => {
     if (step === 'otp') {
       const timer = setTimeout(() => {
         otpInputsRef.current[0]?.focus();
-      }, 100);
+      }, 50);
       return () => clearTimeout(timer);
     }
   }, [step]);
@@ -65,8 +65,26 @@ function LoginContent() {
     setToastMessage(msg);
     setTimeout(() => {
       setToastMessage(null);
-    }, 8000);
+    }, 6000);
   };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    // Requirement 6: Sanitize input - remove spaces, +, -, letters, keep digits only & slice to 10 max
+    const sanitized = raw.replace(/\D/g, '').slice(0, 10);
+    setPhone(sanitized);
+
+    // Requirement 4, 7, 9: Instant First-Digit & Length Validation
+    if (sanitized.length > 0 && !/^[789]/.test(sanitized)) {
+      setError('Enter a valid Indian mobile number starting with 7, 8 or 9.');
+    } else if (sanitized.length > 0 && sanitized.length < 10) {
+      setError('Enter a 10-digit mobile number.');
+    } else {
+      setError(null);
+    }
+  };
+
+  const isPhoneValid = /^[789]\d{9}$/.test(phone);
 
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,10 +116,21 @@ function LoginContent() {
   const handleSendOtp = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    const cleanPhone = phone.replace(/\D/g, '').slice(0, 10);
+    if (!/^[789]\d{9}$/.test(cleanPhone)) {
+      if (cleanPhone.length > 0 && !/^[789]/.test(cleanPhone)) {
+        setError('Mobile number must start with 7, 8 or 9.');
+      } else {
+        setError('Enter a 10-digit mobile number.');
+      }
+      return;
+    }
+
     setLoading(true);
 
     setTimeout(() => {
-      const res = sendPhoneOtp(phone);
+      const res = sendPhoneOtp(cleanPhone);
       setLoading(false);
 
       if (!res.success) {
@@ -111,6 +140,7 @@ function LoginContent() {
 
       setStep('otp');
       setResendTimer(30);
+      // Requirement 12: Toast shows ONLY "Verification code sent"
       triggerToast('Verification code sent');
     }, 400);
   };
@@ -179,7 +209,7 @@ function LoginContent() {
     }, 400);
   };
 
-  // Requirement 8, 23: Real Firebase Google Sign-In with popup chooser
+  // Requirement 16: Real Firebase Google Sign-In with popup chooser
   const handleGoogleClick = async () => {
     if (loading) return;
     setError(null);
@@ -350,30 +380,37 @@ function LoginContent() {
           </form>
         )}
 
-        {/* 2. PHONE AUTH FORM */}
+        {/* 2. PHONE AUTH FORM (Requirements 2 - 13) */}
         {activeTab === 'phone' && (
           <div>
             {step === 'phone' ? (
               <form onSubmit={handleSendOtp} className="space-y-4">
                 <div>
                   <label className="text-xs font-semibold text-gray-300 block mb-1.5">Mobile Number</label>
-                  <div className="flex gap-2">
-                    <span className="px-3 py-2.5 rounded-xl bg-black/40 border border-white/10 text-xs font-bold text-gray-300 flex items-center">
-                      🇮🇳 +91
+                  {/* Fixed +91 prefix and 10-digit input */}
+                  <div className="flex gap-2.5">
+                    <span className="px-3.5 py-2.5 rounded-xl bg-black/50 border border-white/15 text-sm font-bold text-gray-200 flex items-center shrink-0 font-mono">
+                      +91
                     </span>
                     <Input
                       type="tel"
+                      inputMode="numeric"
+                      maxLength={10}
                       required
                       placeholder="9876543210"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      onChange={handlePhoneChange}
                       className="bg-black/40 border-white/10 text-white text-sm tracking-wider font-mono"
                     />
                   </div>
                 </div>
 
-                <Button type="submit" disabled={loading} className="w-full rounded-xl font-bold py-5 gap-2 mt-2">
-                  {loading ? 'Sending Code...' : 'Send 6-Digit OTP'}
+                <Button
+                  type="submit"
+                  disabled={!isPhoneValid || loading}
+                  className="w-full rounded-xl font-bold py-5 gap-2 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Sending Code...' : 'SEND OTP'}
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </form>
