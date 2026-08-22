@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Search, User, Menu, MapPin, ChevronDown, X, LogOut, Ticket, Heart } from 'lucide-react';
+import { Search, User, Menu, MapPin, ChevronDown, X, LogOut, Ticket, Heart, Store } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,11 +10,14 @@ import { useLocation } from '@/context/LocationContext';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import { CitySelectorModal } from '@/components/location/CitySelectorModal';
+import { GlobalSearchModal } from '@/components/search/GlobalSearchModal';
 
 export function Navbar() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+
   const { selectedLocation, setIsCityModalOpen } = useLocation();
   const { user, logout } = useAuth();
   const { favoriteIds } = useFavorites();
@@ -27,11 +30,13 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Requirement 33, 35, 63: Navigation items including Register Your Hall
   const navLinks = [
     { name: 'Movies', href: '/movies' },
     { name: 'Events', href: '/events' },
     { name: 'Theatres', href: '/theatres' },
     { name: 'Favorites', href: '/favorites' },
+    { name: 'Register', href: '/register' },
   ];
 
   return (
@@ -62,7 +67,7 @@ export function Navbar() {
           </div>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-8">
+          <nav className="hidden md:flex items-center gap-7">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
               return (
@@ -76,6 +81,9 @@ export function Navbar() {
                 >
                   {link.name === 'Favorites' && (
                     <Heart className={`w-3.5 h-3.5 ${favoriteIds.length > 0 ? 'text-rose-500 fill-rose-500' : 'text-gray-400'}`} />
+                  )}
+                  {link.name === 'Register' && (
+                    <Store className="w-3.5 h-3.5 text-amber-400" />
                   )}
                   {link.name}
                   {link.name === 'Favorites' && favoriteIds.length > 0 && (
@@ -96,9 +104,15 @@ export function Navbar() {
 
           {/* Right Actions */}
           <div className="flex items-center gap-4">
-            <Link href="/movies" className="text-gray-300 hover:text-white transition-colors" title="Search Movies">
-              <Search className="w-5 h-5" />
-            </Link>
+            {/* Requirement 24, 62: Global Search Trigger Button */}
+            <button
+              onClick={() => setIsSearchModalOpen(true)}
+              className="text-gray-300 hover:text-white transition-colors p-1.5 rounded-full hover:bg-white/10 flex items-center gap-1.5 text-xs font-semibold"
+              title="Search Movies, Theatres & Events"
+            >
+              <Search className="w-5 h-5 text-primary" />
+              <span className="hidden lg:inline text-gray-300 font-normal">Search</span>
+            </button>
 
             <Link
               href="/favorites"
@@ -162,6 +176,20 @@ export function Navbar() {
             exit={{ opacity: 0, y: -20 }}
             className="fixed top-16 left-0 right-0 z-40 bg-[#121212] border-b border-white/10 p-6 md:hidden flex flex-col gap-4 shadow-2xl"
           >
+            {/* Global Search Trigger in Mobile Menu */}
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setIsSearchModalOpen(true);
+              }}
+              className="w-full flex items-center justify-between p-3 rounded-xl bg-black/60 border border-white/10 text-xs font-bold text-gray-200 mb-1"
+            >
+              <span className="flex items-center gap-2">
+                <Search className="w-4 h-4 text-primary" /> Search Movies, Theatres, Events
+              </span>
+              <span className="text-[10px] text-muted-foreground font-mono">🔍</span>
+            </button>
+
             {navLinks.map((link) => (
               <Link
                 key={link.name}
@@ -169,7 +197,10 @@ export function Navbar() {
                 onClick={() => setMobileMenuOpen(false)}
                 className="text-base font-semibold text-gray-200 hover:text-primary transition-colors py-1 flex items-center justify-between"
               >
-                <span>{link.name}</span>
+                <span className="flex items-center gap-2">
+                  {link.name === 'Register' && <Store className="w-4 h-4 text-amber-400" />}
+                  {link.name}
+                </span>
                 {link.name === 'Favorites' && favoriteIds.length > 0 && (
                   <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-rose-600 text-white">
                     {favoriteIds.length}
@@ -218,6 +249,7 @@ export function Navbar() {
       </AnimatePresence>
 
       <CitySelectorModal />
+      <GlobalSearchModal isOpen={isSearchModalOpen} onClose={() => setIsSearchModalOpen(false)} />
     </>
   );
 }

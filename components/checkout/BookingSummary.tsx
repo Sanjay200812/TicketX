@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Movie } from '@/types/movie';
 import { Theatre } from '@/types/theatre';
 import { Show } from '@/types/show';
@@ -5,9 +9,10 @@ import { Seat } from '@/types/seat';
 import {
   calculateSubtotal,
   calculateTotal,
-  BOOKING_FEE_BASE,
-  BOOKING_FEE_IGST,
-  TOTAL_BOOKING_FEE,
+  calculateBaseBookingCharge,
+  calculateBookingIGST,
+  calculateTotalBookingFee,
+  BOOKING_CHARGE_PER_TICKET,
 } from '@/lib/pricing';
 import { MoviePoster } from '@/components/shared/MoviePoster';
 
@@ -20,7 +25,13 @@ interface BookingSummaryProps {
 }
 
 export function BookingSummary({ movie, theatre, show, selectedSeats, isEvent = false }: BookingSummaryProps) {
+  const [isFeeExpanded, setIsFeeExpanded] = useState(false);
+
+  const ticketCount = selectedSeats.length;
   const subtotal = calculateSubtotal(selectedSeats);
+  const baseBookingCharge = calculateBaseBookingCharge(ticketCount);
+  const bookingIGST = calculateBookingIGST(ticketCount);
+  const totalBookingFee = calculateTotalBookingFee(ticketCount);
   const total = calculateTotal(selectedSeats);
 
   // Group categories for clear display
@@ -82,7 +93,7 @@ export function BookingSummary({ movie, theatre, show, selectedSeats, isEvent = 
         {/* Selected Seats & Categories */}
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground font-semibold">Selected Seats ({selectedSeats.length})</span>
+            <span className="text-muted-foreground font-semibold">Selected Seats ({ticketCount})</span>
             <span className="font-bold text-white font-mono max-w-[60%] text-right truncate">
               {selectedSeats.map((s) => s.id).join(', ')}
             </span>
@@ -97,32 +108,45 @@ export function BookingSummary({ movie, theatre, show, selectedSeats, isEvent = 
           </div>
         </div>
 
-        {/* Itemized Pricing & Fixed Booking Fee (Requirement 2, 3) */}
+        {/* Itemized Pricing & Collapsible Booking Charges (Requirement 18, 19, 20) */}
         <div className="border-t border-dashed border-white/20 pt-4 space-y-2.5 font-mono text-sm">
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Seat Subtotal</span>
-            <span className="text-white font-bold">₹{subtotal.toLocaleString()}</span>
+            <span className="text-muted-foreground">Ticket Subtotal</span>
+            <span className="text-white font-bold">₹{subtotal.toFixed(2)}</span>
           </div>
 
-          <div className="flex justify-between text-xs text-gray-400 pl-2">
-            <span>Booking Charge</span>
-            <span className="text-white font-medium">₹{BOOKING_FEE_BASE}</span>
-          </div>
+          {/* Collapsible Booking Charges Row */}
+          <div className="bg-black/30 border border-white/10 rounded-xl p-3">
+            <button
+              onClick={() => setIsFeeExpanded(!isFeeExpanded)}
+              className="w-full flex items-center justify-between text-xs font-bold text-emerald-400 focus:outline-none"
+            >
+              <span className="flex items-center gap-1.5">
+                <span>Booking Charges</span>
+                {isFeeExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </span>
+              <span>₹{totalBookingFee.toFixed(2)}</span>
+            </button>
 
-          <div className="flex justify-between text-xs text-gray-400 pl-2 pb-1 border-b border-white/5">
-            <span>IGST</span>
-            <span className="text-white font-medium">₹{BOOKING_FEE_IGST}</span>
-          </div>
-
-          <div className="flex justify-between text-emerald-400 font-semibold">
-            <span>Total Booking Fee</span>
-            <span>₹{TOTAL_BOOKING_FEE}</span>
+            {/* Expanded Itemized Breakdown */}
+            {isFeeExpanded && (
+              <div className="pt-3 mt-2 border-t border-white/10 space-y-2 text-[11px] text-gray-300">
+                <div className="flex justify-between">
+                  <span>Booking Charge (₹{BOOKING_CHARGE_PER_TICKET} × {ticketCount})</span>
+                  <span>₹{baseBookingCharge.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-gray-400">
+                  <span>IGST @ 18%</span>
+                  <span>₹{bookingIGST.toFixed(2)}</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         <div className="border-t border-white/10 pt-4 flex justify-between items-center">
-          <span className="text-base font-bold text-white">Grand Total</span>
-          <span className="text-2xl font-extrabold text-primary font-mono">₹{total.toLocaleString()}</span>
+          <span className="text-base font-bold text-white">Amount Payable</span>
+          <span className="text-2xl font-extrabold text-primary font-mono">₹{total.toFixed(2)}</span>
         </div>
       </div>
     </div>

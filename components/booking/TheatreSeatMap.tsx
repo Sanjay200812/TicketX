@@ -28,8 +28,9 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Requirement 11, 12, 13: Category Standardization & Swapped Order Rule
-  // Top: GOLD (₹295) | Middle: SILVER (₹150) | Bottom: ON LAND LUXURY (NRT Only)
+  // Requirements 1, 2, 3, 4, 5: Category Standardization Rule
+  // NRT Theatres: GOLD ₹295 | SILVER ₹150 | ON LAND LUXURY ₹1,116
+  // Non-NRT Theatres: GOLD ₹295 | SILVER ₹150 (ONLY 2 SECTIONS)
   const isNRT = layout.locationId === 'nrt';
 
   const rawSections: SeatSection[] = layout.sections.map((sec) => {
@@ -37,16 +38,16 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
     const catLower = (sec.name || '').toLowerCase();
 
     if (isNRT) {
-      // NRT Theatres: Silver ₹150, Gold ₹295, On Land Luxury preserved
+      // NRT Theatres: Gold ₹295, Silver ₹150, On Land Luxury ₹1,116 (Requirement 1, 2)
       if (catLower.includes('luxury') || catLower.includes('land') || key === 'onLand') {
-        return { ...sec, name: 'On Land Luxury Recliner', categoryKey: 'onLand' };
+        return { ...sec, name: 'On Land Luxury Recliner', price: 1116, categoryKey: 'onLand' };
       }
       if (catLower.includes('gold') || key === 'gold') {
         return { ...sec, name: 'Gold Class', price: 295, categoryKey: 'gold' };
       }
       return { ...sec, name: 'Silver Class', price: 150, categoryKey: 'silver' };
     } else {
-      // Other Cities: ONLY 2 Categories (Gold ₹295 Top / Silver ₹150 Middle)
+      // Other Cities: ONLY 2 Categories (Gold ₹295 Top / Silver ₹150 Middle) (Requirement 3, 4)
       if (catLower.includes('gold') || key === 'gold' || catLower.includes('luxury') || catLower.includes('land') || key === 'onLand') {
         return { ...sec, name: 'Gold Class', price: 295, categoryKey: 'gold' };
       }
@@ -107,7 +108,7 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
 
   return (
     <div className="w-full max-w-5xl mx-auto flex flex-col items-center select-none relative">
-      {/* Requirement 19, 20, 21: Floating Temporary Navigation Minimap */}
+      {/* Floating Temporary Navigation Minimap */}
       <TemporaryMinimap containerRef={scrollContainerRef} hasLuxury={hasLuxury} />
 
       {/* Layout Header Info & Capacity Display */}
@@ -115,7 +116,7 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
         <div className="flex items-center gap-3">
           <span className="font-bold text-white text-lg md:text-xl font-heading">{layout.theatreName}</span>
           <span className="px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 font-bold text-[11px]">
-            {isNRT ? 'Gold ₹295 • Silver ₹150 • Luxury' : 'Gold ₹295 • Silver ₹150'}
+            {isNRT ? 'Gold ₹295 • Silver ₹150 • Luxury ₹1,116' : 'Gold ₹295 • Silver ₹150'}
           </span>
         </div>
 
@@ -136,7 +137,7 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
       {/* Legend */}
       <SeatLegend sections={normalizedSections} />
 
-      {/* AUDITORIUM THEATRE ENTRANCE CORRIDOR (Requirement 14, 16, 17 - EXIT MARKER REMOVED) */}
+      {/* AUDITORIUM THEATRE ENTRANCE CORRIDOR (Requirement 9, 11 - EXIT MARKER REMOVED) */}
       <div className="w-full max-w-4xl flex items-center justify-start mb-4 px-2">
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/30 text-xs font-bold font-mono shadow-md">
           <DoorOpen className="w-4 h-4 text-amber-400" />
@@ -144,7 +145,7 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
         </div>
       </div>
 
-      {/* SEATING MAP SCROLL CONTAINER (ORDER: GOLD TOP -> SILVER MIDDLE -> LUXURY BOTTOM) */}
+      {/* SEATING MAP SCROLL CONTAINER */}
       <div
         ref={scrollContainerRef}
         className="w-full space-y-10 overflow-x-auto hide-scrollbar py-4 border border-white/5 rounded-2xl p-4 bg-black/40"

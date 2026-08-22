@@ -57,14 +57,13 @@ export interface ServerBooking {
 }
 
 interface DBStore {
-  seats: Record<string, ServerSeatState>; // key: `${showId}:${seatCode}`
+  seats: Record<string, ServerSeatState>;
   holds: Record<string, ServerHold>;
   bookings: Record<string, ServerBooking>;
 }
 
 const DB_PATH = path.join(process.cwd(), '.next', 'ticketx_db.json');
 
-// Helper to load db from file
 function loadDB(): DBStore {
   try {
     if (fs.existsSync(DB_PATH)) {
@@ -77,7 +76,6 @@ function loadDB(): DBStore {
   return { seats: {}, holds: {}, bookings: {} };
 }
 
-// Helper to save db to file
 function saveDB(db: DBStore) {
   try {
     const dir = path.dirname(DB_PATH);
@@ -90,17 +88,14 @@ function saveDB(db: DBStore) {
   }
 }
 
-// Global in-memory DB initialized from storage
 const memoryDB: DBStore = loadDB();
 
-// Clean expired holds (Requirement 18)
 export function cleanupExpiredHolds(db: DBStore = memoryDB) {
   const now = Date.now();
   let changed = false;
   Object.keys(db.holds).forEach((holdId) => {
     const hold = db.holds[holdId];
     if (hold.expiresAt <= now) {
-      // Release seats when hold expires
       hold.seatCodes.forEach((seatCode) => {
         const key = `${hold.showId}:${seatCode}`;
         if (db.seats[key] && db.seats[key].status === 'held' && db.seats[key].heldBy === hold.userId) {
@@ -116,9 +111,6 @@ export function cleanupExpiredHolds(db: DBStore = memoryDB) {
   }
 }
 
-/**
- * Get current seat status for a show
- */
 export function getShowSeatsStatus(
   showId: string,
   requestingUserId?: string
@@ -136,7 +128,6 @@ export function getShowSeatsStatus(
         if (requestingUserId && seat.heldBy === requestingUserId) {
           // Seat held by requesting user
         } else {
-          // Seat held by another user
           held.push(seat.seatCode);
         }
       }
@@ -160,9 +151,6 @@ export function getShowSeatsStatus(
   return { booked, held, myHeld };
 }
 
-/**
- * Atomically reserve seats when user clicks PROCEED TO CHECKOUT (Requirement 7, 10, 16, 17)
- */
 export function holdSeats(
   showId: string,
   seatCodes: string[],
@@ -180,7 +168,6 @@ export function holdSeats(
 
   const unavailableSeats: string[] = [];
 
-  // Atomic race condition check
   seatCodes.forEach((code) => {
     const key = `${showId}:${code}`;
     const current = memoryDB.seats[key];
@@ -206,11 +193,9 @@ export function holdSeats(
     };
   }
 
-  // Active checkout hold: 10 minutes (Requirement 10)
   const holdId = `hold_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
   const expiresAt = Date.now() + ACTIVE_CHECKOUT_HOLD_MINUTES * 60 * 1000;
 
-  // Release any previous active holds for this user on this show
   Object.keys(memoryDB.holds).forEach((hId) => {
     const h = memoryDB.holds[hId];
     if (h.showId === showId && h.userId === userId) {
@@ -243,9 +228,6 @@ export function holdSeats(
   return { success: true, holdId, expiresAt };
 }
 
-/**
- * Transition hold to abandoned grace period (5 minutes) when user leaves checkout (Requirement 12)
- */
 export function abandonHold(
   holdId: string,
   userId: string
@@ -254,7 +236,6 @@ export function abandonHold(
   const hold = memoryDB.holds[holdId];
 
   if (hold && hold.userId === userId && hold.expiresAt > Date.now()) {
-    // 5-minute abandoned grace timer (Requirement 12)
     const expiresAt = Date.now() + ABANDONED_HOLD_MINUTES * 60 * 1000;
     hold.status = 'abandoned';
     hold.expiresAt = expiresAt;
@@ -273,9 +254,6 @@ export function abandonHold(
   return { success: false };
 }
 
-/**
- * Release a seat hold completely (e.g. user cancels)
- */
 export function releaseHold(holdId: string): void {
   cleanupExpiredHolds(memoryDB);
   const hold = memoryDB.holds[holdId];
@@ -291,9 +269,6 @@ export function releaseHold(holdId: string): void {
   }
 }
 
-/**
- * Atomically confirm booking with server-verified total calculation
- */
 export function confirmBooking(params: {
   holdId?: string;
   showId: string;
@@ -318,7 +293,6 @@ export function confirmBooking(params: {
 }): { success: true; booking: ServerBooking } | { success: false; error: string } {
   cleanupExpiredHolds(memoryDB);
 
-  // Check idempotency
   if (params.idempotencyKey) {
     const existing = Object.values(memoryDB.bookings).find(
       (b) => b.idempotencyKey === params.idempotencyKey
@@ -328,7 +302,6 @@ export function confirmBooking(params: {
     }
   }
 
-  // Check seats availability
   for (const seat of params.seatCodes) {
     const key = `${params.showId}:${seat}`;
     const current = memoryDB.seats[key];
@@ -342,14 +315,14 @@ export function confirmBooking(params: {
     }
   }
 
-  // Server-side recalculation of prices (Requirement 2: Fixed ₹69 booking fee per booking)
+  // Requirement 16, 21: Server-side verification with ₹20 per ticket + 18% IGST
+  const ticketCount = params.seatCodes.length;
   const subtotal = params.seatPrices.reduce((acc, s) => acc + s.price, 0);
-  const bookingFee = 69; // Fixed total booking fee (Base ₹50 + IGST ₹19)
-  const taxableAmount = subtotal;
-  const tax = 19;
-  const grandTotal = subtotal + bookingFee;
+  const baseBookingCharge = ticketCount * 20;
+  const bookingFeeIGST = Math.round(baseBookingCharge * 0.18 * 100) / 100;
+  const totalBookingFee = Math.round((baseBookingCharge + bookingFeeIGST) * 100) / 100;
+  const grandTotal = Math.round((subtotal + totalBookingFee) * 100) / 100;
 
-  // Update seats to permanently booked (Requirement 11)
   params.seatCodes.forEach((code) => {
     const key = `${params.showId}:${code}`;
     memoryDB.seats[key] = {
@@ -387,9 +360,9 @@ export function confirmBooking(params: {
     seatCodes: params.seatCodes,
     pricing: {
       subtotal,
-      bookingFee,
-      taxableAmount,
-      tax,
+      bookingFee: totalBookingFee,
+      taxableAmount: subtotal,
+      tax: bookingFeeIGST,
       grandTotal,
     },
     status: 'confirmed',
@@ -402,9 +375,6 @@ export function confirmBooking(params: {
   return { success: true, booking: newBooking };
 }
 
-/**
- * Get user bookings
- */
 export function getUserBookings(userId: string): ServerBooking[] {
   cleanupExpiredHolds(memoryDB);
   return Object.values(memoryDB.bookings)
@@ -412,9 +382,6 @@ export function getUserBookings(userId: string): ServerBooking[] {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
-/**
- * Archive booking
- */
 export function archiveBooking(bookingId: string, userId: string): boolean {
   const booking = memoryDB.bookings[bookingId];
   if (booking && booking.userId === userId) {
@@ -426,9 +393,6 @@ export function archiveBooking(bookingId: string, userId: string): boolean {
   return false;
 }
 
-/**
- * Soft remove booking
- */
 export function removeBooking(bookingId: string, userId: string): boolean {
   const booking = memoryDB.bookings[bookingId];
   if (booking && booking.userId === userId) {

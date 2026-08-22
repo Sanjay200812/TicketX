@@ -3,19 +3,21 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { User, LogOut, Ticket, MapPin, Sparkles, ChevronRight, Edit3, CheckCircle2, AlertCircle } from 'lucide-react';
+import { User, LogOut, Ticket, MapPin, ChevronRight, Edit3, CheckCircle2, AlertCircle, Store, Clock } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useLocation } from '@/context/LocationContext';
 import { getBookings } from '@/lib/storage';
 import { Booking } from '@/types/booking';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { VenueRegistrationRequest } from '@/lib/serverVenueStore';
 
 export default function ProfilePage() {
   const router = useRouter();
   const { user, updateUsername, logout } = useAuth();
   const { location, setIsCityModalOpen } = useLocation();
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [venueRegistrations, setVenueRegistrations] = useState<VenueRegistrationRequest[]>([]);
 
   // Profile Edit State
   const [editing, setEditing] = useState(false);
@@ -30,6 +32,22 @@ export default function ProfilePage() {
     }
     setBookings(getBookings());
     setUsernameInput(user.name || '');
+
+    // Fetch user venue registrations (Requirement 53)
+    const fetchRegistrations = async () => {
+      try {
+        const query = user.id ? `userId=${encodeURIComponent(user.id)}` : `email=${encodeURIComponent(user.email || '')}`;
+        const res = await fetch(`/api/register-venue?${query}`);
+        if (res.ok) {
+          const data = await res.json();
+          setVenueRegistrations(data.registrations || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch user venue registrations:', err);
+      }
+    };
+
+    fetchRegistrations();
   }, [user, router]);
 
   if (!user) return null;
@@ -166,19 +184,48 @@ export default function ProfilePage() {
           </button>
 
           <Link
-            href="/events"
-            className="bg-secondary/30 border border-white/10 hover:border-primary/40 rounded-xl p-5 flex items-center justify-between transition-all group"
+            href="/register"
+            className="bg-secondary/30 border border-white/10 hover:border-amber-500/40 rounded-xl p-5 flex items-center justify-between transition-all group"
           >
             <div className="flex items-center gap-3">
-              <Sparkles className="w-5 h-5 text-primary" />
+              <Store className="w-5 h-5 text-amber-400" />
               <div>
-                <p className="font-bold text-white group-hover:text-primary transition-colors">Browse Events</p>
-                <p className="text-xs text-muted-foreground">NEC Freshers & StarX Live</p>
+                <p className="font-bold text-white group-hover:text-amber-400 transition-colors">Register Hall</p>
+                <p className="text-xs text-muted-foreground">List your theatre or venue</p>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
+
+        {/* SECTION: MY VENUE REGISTRATIONS (Requirement 53) */}
+        {venueRegistrations.length > 0 && (
+          <div className="bg-secondary/40 border border-white/10 rounded-2xl p-6 md:p-8 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <h3 className="font-bold text-lg text-white font-heading flex items-center gap-2">
+                <Store className="w-5 h-5 text-amber-400" /> My Venue Registrations ({venueRegistrations.length})
+              </h3>
+              <span className="text-xs font-mono text-muted-foreground uppercase">CLIENT ENQUIRIES</span>
+            </div>
+
+            <div className="space-y-3">
+              {venueRegistrations.map((req) => (
+                <div key={req.id} className="bg-black/50 border border-white/10 rounded-xl p-4 flex items-center justify-between font-mono text-xs">
+                  <div>
+                    <p className="font-bold text-sm text-white">{req.businessName}</p>
+                    <p className="text-muted-foreground text-xs">{req.city}, {req.state} • {req.venueType.replace('_', ' ').toUpperCase()}</p>
+                    <p className="text-[10px] text-gray-500 mt-1">Submitted: {new Date(req.createdAt).toLocaleDateString()}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 rounded-full font-bold uppercase text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                      <Clock className="w-3 h-3 animate-spin" /> {req.status.replace('_', ' ')}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

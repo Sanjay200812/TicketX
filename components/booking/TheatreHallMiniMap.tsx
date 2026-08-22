@@ -16,7 +16,7 @@ export function TheatreHallMiniMap({
   hasLuxury = false,
   silverPrice = 150,
   goldPrice = 295,
-  luxuryPrice = 777,
+  luxuryPrice = 1116,
 }: TheatreHallMiniMapProps) {
   return (
     <div className="w-full bg-[#121215]/80 border border-white/10 rounded-2xl p-4 md:p-5 mb-6 shadow-lg">
@@ -32,17 +32,17 @@ export function TheatreHallMiniMap({
       <div className="relative max-w-xl mx-auto bg-black/60 border border-white/10 rounded-xl p-4 flex flex-col items-center space-y-3 font-mono text-[10px]">
         {/* Entrance Marker Label Top Right */}
         <div className="absolute top-2 right-3 text-[9px] font-bold text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded bg-amber-500/10">
-          ENTRY / HALL ENTRANCE →
+          ENTRY →
         </div>
 
-        {/* Silver Seating Block (Top / Balcony Tier) */}
-        <div className="w-full bg-slate-800/40 border border-slate-600/40 rounded-lg p-2.5 text-center flex flex-col items-center justify-center space-y-1">
-          <div className="flex items-center justify-between w-full text-slate-300 font-bold px-2">
-            <span>SILVER CLASS</span>
-            <span className="text-emerald-400">₹{silverPrice}</span>
+        {/* Gold Seating Block (Top Tier) */}
+        <div className="w-full bg-amber-950/20 border border-amber-500/30 rounded-lg p-2.5 text-center flex flex-col items-center justify-center space-y-1">
+          <div className="flex items-center justify-between w-full text-amber-300 font-bold px-2">
+            <span>GOLD CLASS</span>
+            <span className="text-emerald-400">₹{goldPrice}</span>
           </div>
-          <div className="w-full h-3 bg-slate-700/30 rounded border border-slate-600/20 flex items-center justify-center text-[8px] text-slate-400">
-            Back Hall Seating Rows (Rows A - F)
+          <div className="w-full h-3 bg-amber-500/10 rounded border border-amber-500/20 flex items-center justify-center text-[8px] text-amber-200">
+            Top Auditorium Tier (Rows A - F)
           </div>
         </div>
 
@@ -53,14 +53,14 @@ export function TheatreHallMiniMap({
           <span>Right Aisle →</span>
         </div>
 
-        {/* Gold Seating Block (Middle Tier) */}
-        <div className="w-full bg-amber-950/20 border border-amber-500/30 rounded-lg p-2.5 text-center flex flex-col items-center justify-center space-y-1">
-          <div className="flex items-center justify-between w-full text-amber-300 font-bold px-2">
-            <span>GOLD CLASS</span>
-            <span className="text-emerald-400">₹{goldPrice}</span>
+        {/* Silver Seating Block (Middle Tier) */}
+        <div className="w-full bg-slate-800/40 border border-slate-600/40 rounded-lg p-2.5 text-center flex flex-col items-center justify-center space-y-1">
+          <div className="flex items-center justify-between w-full text-slate-300 font-bold px-2">
+            <span>SILVER CLASS</span>
+            <span className="text-emerald-400">₹{silverPrice}</span>
           </div>
-          <div className="w-full h-3 bg-amber-500/10 rounded border border-amber-500/20 flex items-center justify-center text-[8px] text-amber-200">
-            Prime Central Viewing Block (Rows G - N)
+          <div className="w-full h-3 bg-slate-700/30 rounded border border-slate-600/20 flex items-center justify-center text-[8px] text-slate-400">
+            Middle Viewing Rows (Rows G - N)
           </div>
         </div>
 
