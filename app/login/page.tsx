@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Phone, Lock, User as UserIcon, ArrowRight, CheckCircle2, AlertCircle, ShieldCheck, X } from 'lucide-react';
+import { Mail, Phone, Lock, User as UserIcon, ArrowRight, CheckCircle2, AlertCircle, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
@@ -30,10 +30,6 @@ function LoginContent() {
   const [otp, setOtp] = useState<string[]>(['', '', '', '', '', '']);
   const [resendTimer, setResendTimer] = useState(30);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  // Google Account Chooser Modal State (Requirement 6, 7, 8)
-  const [showGoogleChooser, setShowGoogleChooser] = useState(false);
-  const [customGoogleEmail, setCustomGoogleEmail] = useState('');
 
   // Status & Error
   const [error, setError] = useState<string | null>(null);
@@ -115,8 +111,6 @@ function LoginContent() {
 
       setStep('otp');
       setResendTimer(30);
-
-      // Requirement 40: Toast displays ONLY "Verification code sent"
       triggerToast('Verification code sent');
     }, 400);
   };
@@ -137,7 +131,6 @@ function LoginContent() {
     }
   };
 
-  // Requirement 37: Single digit typing auto-advances to next box
   const handleOtpChange = (index: number, value: string) => {
     const cleanVal = value.replace(/\D/g, '');
     if (!cleanVal && value) return;
@@ -151,7 +144,6 @@ function LoginContent() {
     }
   };
 
-  // Requirement 39: Paste 6-digit OTP fills all fields automatically
   const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
@@ -187,27 +179,28 @@ function LoginContent() {
     }, 400);
   };
 
-  const handleGoogleClick = () => {
-    const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    if (googleClientId) {
-      loginWithGoogle();
-    } else {
-      setShowGoogleChooser(true);
-    }
-  };
-
-  const handleConfirmGoogleSelect = (selectedEmail: string, selectedName: string) => {
-    setShowGoogleChooser(false);
+  // Requirement 8, 23: Real Firebase Google Sign-In with popup chooser
+  const handleGoogleClick = async () => {
+    if (loading) return;
+    setError(null);
     setLoading(true);
-    setTimeout(() => {
-      loginWithGoogle(selectedEmail, selectedName);
+
+    try {
+      const res = await loginWithGoogle();
       setLoading(false);
-    }, 400);
+
+      if (!res.success && res.error) {
+        setError(res.error);
+      }
+    } catch (err: unknown) {
+      setLoading(false);
+      console.error('Google login execution error:', err);
+    }
   };
 
   return (
     <div className="min-h-screen pt-24 pb-16 flex items-center justify-center bg-background px-4">
-      {/* Dev Toast Notification */}
+      {/* Toast Notification */}
       <AnimatePresence>
         {toastMessage && (
           <motion.div
@@ -455,7 +448,7 @@ function LoginContent() {
           </span>
         </div>
 
-        {/* 3. CONTINUE WITH GOOGLE (Requirements 6, 7, 8) */}
+        {/* 3. CONTINUE WITH REAL FIREBASE GOOGLE AUTH */}
         <Button
           variant="outline"
           onClick={handleGoogleClick}
@@ -480,103 +473,9 @@ function LoginContent() {
               d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.58l3.99 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
             />
           </svg>
-          Continue with Google
+          {loading ? 'Connecting to Google...' : 'Continue with Google'}
         </Button>
       </div>
-
-      {/* REAL GOOGLE ACCOUNT CHOOSER DIALOG */}
-      <AnimatePresence>
-        {showGoogleChooser && (
-          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/85 backdrop-blur-md"
-              onClick={() => setShowGoogleChooser(false)}
-            />
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="relative w-full max-w-sm bg-white text-gray-900 rounded-3xl p-6 shadow-2xl z-10 font-sans"
-            >
-              <button
-                onClick={() => setShowGoogleChooser(false)}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              <div className="flex items-center gap-3 mb-4">
-                <svg className="w-6 h-6" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
-                  <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.29v3.15C3.26 21.3 7.31 24 12 24z"/>
-                  <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.29C.47 8.2.0 10.04.0 12s.47 3.8 1.29 5.42l3.99-3.15z"/>
-                  <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.58l3.99 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
-                </svg>
-                <h3 className="text-lg font-bold text-gray-900">Sign in with Google</h3>
-              </div>
-
-              <p className="text-xs text-gray-500 mb-5">Choose an account to continue to <span className="font-bold text-gray-800">TicketX</span></p>
-
-              <div className="space-y-2 mb-5">
-                <button
-                  onClick={() => handleConfirmGoogleSelect('sanju.ticketx@gmail.com', 'Sanju User')}
-                  className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-gray-100 border border-gray-200 transition-colors text-left"
-                >
-                  <div className="w-9 h-9 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-sm">
-                    S
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-900">Sanju User</p>
-                    <p className="text-xs text-gray-500">sanju.ticketx@gmail.com</p>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => handleConfirmGoogleSelect('movie.lover@gmail.com', 'Movie Enthusiast')}
-                  className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-gray-100 border border-gray-200 transition-colors text-left"
-                >
-                  <div className="w-9 h-9 rounded-full bg-rose-600 text-white font-bold flex items-center justify-center text-sm">
-                    M
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-900">Movie Enthusiast</p>
-                    <p className="text-xs text-gray-500">movie.lover@gmail.com</p>
-                  </div>
-                </button>
-              </div>
-
-              {/* Custom Google Email Input */}
-              <div className="pt-3 border-t border-gray-200">
-                <p className="text-xs font-semibold text-gray-600 mb-2">Use another Google email:</p>
-                <div className="flex gap-2">
-                  <input
-                    type="email"
-                    placeholder="you@gmail.com"
-                    value={customGoogleEmail}
-                    onChange={(e) => setCustomGoogleEmail(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-xl text-xs text-gray-900 focus:outline-none focus:border-blue-600"
-                  />
-                  <Button
-                    size="sm"
-                    disabled={!customGoogleEmail.includes('@')}
-                    onClick={() => {
-                      const customName = customGoogleEmail.split('@')[0];
-                      handleConfirmGoogleSelect(customGoogleEmail, customName);
-                    }}
-                    className="rounded-xl text-xs bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    Continue
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

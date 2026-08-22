@@ -1,6 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { loginWithGoogle as firebaseLoginWithGoogle, logoutFirebaseUser } from '@/lib/firebaseAuth';
 
 export interface TicketXUser {
   id: string;
@@ -23,14 +26,15 @@ interface PendingOtp {
 interface AuthContextType {
   user: TicketXUser | null;
   pendingOtp: PendingOtp | null;
+  loading: boolean;
   sendPhoneOtp: (phone: string) => { success: boolean; error?: string };
   verifyPhoneOtp: (otp: string) => { success: boolean; error?: string };
   loginWithEmail: (email: string, pass: string) => { success: boolean; error?: string };
   signupWithEmail: (name: string, email: string, pass: string) => { success: boolean; error?: string };
-  loginWithGoogle: (customEmail?: string, customName?: string, customAvatar?: string) => void;
+  loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   updateUsername: (newName: string) => { success: boolean; error?: string };
   setRole: (role: 'customer' | 'venue_owner' | 'admin') => void;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -41,8 +45,11 @@ const USERS_DB_KEY = 'ticketx_registered_users';
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<TicketXUser | null>(null);
   const [pendingOtp, setPendingOtp] = useState<PendingOtp | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  // Requirement 10: Observe Firebase Authentication state with onAuthStateChanged (Official Firebase recommendation)
   useEffect(() => {
+    // 1. Initial check from localStorage for fast initial render
     const saved = localStorage.getItem('ticketx_user');
     if (saved) {
       try {
@@ -52,6 +59,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error(e);
       }
     }
+
+    // 2. Real-time Firebase Authentication State Observer
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
+      if (firebaseUser) {
+        // Look up existing profile in registry to preserve custom edited display names or venue owner roles
+        let existingUser: TicketXUser | null = null;
+        try {
+          const storedRegistry = localStorage.getItem(USERS_DB_KEY);
+          if (storedRegistry) {
+            const registry: Record<string, TicketXUser> = JSON.parse(storedRegistry);
+            existingUser = registry[firebaseUser.uid] || (firebaseUser.email ? registry[firebaseUser.email.toLowerCase()] : null);
+          }
+        } catch (e) {
+          console.error('Registry lookup error:', e);
+        }
+
+        const ticketxUser: TicketXUser = {
+          id: firebaseUser.uid, // Requirement 9: Stable Firebase user.uid identity
+          name: existingUser?.name || firebaseUser.displayName || (firebaseUser.email ? firebaseUser.email.split('@')[0] : 'TicketX Member'),
+          email: firebaseUser.email || existingUser?.email,
+          avatar: firebaseUser.photoURL || existingUser?.avatar,
+          authMethod: 'google',
+          role: existingUser?.role || 'customer',
+          createdAt: existingUser?.createdAt || new Date().toISOString(),
+        };
+
+        saveUserSession(ticketxUser);
+      } else {
+        // If current active session was Google auth, log out local session on Firebase logout
+        const currentSaved = localStorage.getItem('ticketx_user');
+        if (currentSaved) {
+          try {
+            const parsed = JSON.parse(currentSaved);
+            if (parsed.authMethod === 'google') {
+              setUser(null);
+              localStorage.removeItem('ticketx_user');
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const saveUserSession = (u: TicketXUser) => {
@@ -59,10 +112,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(normalizedUser);
     localStorage.setItem('ticketx_user', JSON.stringify(normalizedUser));
 
-    // Save/update user in registry to prevent duplicate accounts
+    // Save/update user in registry mapped by Firebase UID and email
     try {
       const storedRegistry = localStorage.getItem(USERS_DB_KEY);
       const registry: Record<string, TicketXUser> = storedRegistry ? JSON.parse(storedRegistry) : {};
+      registry[u.id] = normalizedUser;
       if (u.email) {
         registry[u.email.toLowerCase()] = normalizedUser;
       }
@@ -122,7 +176,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const phoneFormatted = `+91 ${pendingOtp.phone}`;
     const masked = `+91 ••••••${pendingOtp.phone.slice(-4)}`;
 
-    // Account linking check
     let existingUser: TicketXUser | null = null;
     try {
       const storedRegistry = localStorage.getItem(USERS_DB_KEY);
@@ -202,48 +255,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: true };
   };
 
-  // Requirements 6, 7, 8: Real Google account linking
-  const loginWithGoogle = (customEmail?: string, customName?: string, customAvatar?: string) => {
-    const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    if (googleClientId) {
-      const redirectUri = window.location.origin + '/login';
-      const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${googleClientId}&redirect_uri=${encodeURIComponent(
-        redirectUri
-      )}&response_type=token&scope=email%20profile`;
-      window.location.href = googleAuthUrl;
-      return;
-    }
-
-    const email = (customEmail || 'user.ticketx@gmail.com').toLowerCase().trim();
-    const name = customName || email.split('@')[0].toUpperCase();
-    const avatar = customAvatar || 'https://lh3.googleusercontent.com/a/default-user';
-
-    // Account linking check: reuse existing user if email matches
-    let existingUser: TicketXUser | null = null;
+  // Requirements 7, 8, 9: Real Firebase Google Authentication Login
+  const loginWithGoogle = async (): Promise<{ success: boolean; error?: string }> => {
     try {
-      const storedRegistry = localStorage.getItem(USERS_DB_KEY);
-      if (storedRegistry) {
-        const registry: Record<string, TicketXUser> = JSON.parse(storedRegistry);
-        existingUser = registry[email] || null;
+      const fbUser = await firebaseLoginWithGoogle();
+      if (fbUser) {
+        return { success: true };
       }
-    } catch (e) {
-      console.error(e);
+      return { success: false, error: 'Failed to complete Google Sign-In.' };
+    } catch (err: any) {
+      console.error('Google Auth login error:', err);
+      if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
+        return { success: false };
+      }
+      if (err?.code === 'auth/unauthorized-domain') {
+        return {
+          success: false,
+          error: 'This domain is not authorized for Google Sign-In in Firebase Console. Please add domain under Firebase Auth Settings → Authorized Domains.',
+        };
+      }
+      return { success: false, error: err?.message || 'Unable to sign in with Google. Please try again.' };
     }
-
-    const targetUser: TicketXUser = existingUser ? {
-      ...existingUser,
-      avatar: avatar || existingUser.avatar,
-    } : {
-      id: `usr_google_${email.replace(/[^a-zA-Z0-9]/g, '_')}`,
-      name,
-      email,
-      avatar,
-      authMethod: 'google',
-      role: 'customer',
-      createdAt: new Date().toISOString(),
-    };
-
-    saveUserSession(targetUser);
   };
 
   const updateUsername = (newName: string) => {
@@ -263,7 +295,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: false, error: 'No active user session found.' };
   };
 
-  const logout = () => {
+  const logout = async (): Promise<void> => {
+    try {
+      await logoutFirebaseUser();
+    } catch (e) {
+      console.error('Firebase signout error:', e);
+    }
     setUser(null);
     setPendingOtp(null);
     localStorage.removeItem('ticketx_user');
@@ -274,6 +311,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         pendingOtp,
+        loading,
         sendPhoneOtp,
         verifyPhoneOtp,
         loginWithEmail,
