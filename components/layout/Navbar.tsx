@@ -7,11 +7,9 @@ import { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from '@/context/LocationContext';
-import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import { CitySelectorModal } from '@/components/location/CitySelectorModal';
 import { GlobalSearchModal } from '@/components/search/GlobalSearchModal';
-import { UserMenu } from './UserMenu';
 import { Sidebar } from './Sidebar';
 import { TOP_NAV_ITEMS } from '@/config/navigation';
 
@@ -26,7 +24,6 @@ export function Navbar() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { selectedLocation, setIsCityModalOpen } = useLocation();
-  const { user } = useAuth();
   const { favoriteIds } = useFavorites();
 
   useEffect(() => {
@@ -56,15 +53,26 @@ export function Navbar() {
         )}
       >
         <div className="container mx-auto px-4 md:px-6 flex items-center justify-between" ref={dropdownRef}>
-          {/* Logo & City Selector */}
-          <div className="flex items-center gap-5">
+          {/* LEFT: Sidebar Opener (Hamburger Button) + Logo + City Selector (Requirements 1, 2) */}
+          <div className="flex items-center gap-3 md:gap-4">
+            {/* Hamburger / Sidebar Menu Button on Left */}
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 rounded-xl text-white hover:bg-white/10 transition-colors flex items-center justify-center focus:outline-none"
+              aria-label="Open sidebar menu"
+              title="Menu"
+            >
+              <Menu className="w-6 h-6 text-white" />
+            </button>
+
+            {/* TicketX Logo */}
             <Link href="/" className="flex items-center gap-2 relative group">
               <span className="text-2xl font-black tracking-tighter text-white font-heading">
                 TICKET<span className="text-primary">X</span>
               </span>
             </Link>
 
-            {/* City Location Button */}
+            {/* City Location Selector Button */}
             <button
               onClick={() => setIsCityModalOpen(true)}
               className="hidden sm:flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-secondary/80 hover:bg-secondary text-gray-200 border border-white/10 transition-all"
@@ -75,7 +83,7 @@ export function Navbar() {
             </button>
           </div>
 
-          {/* Desktop Navigation Links */}
+          {/* CENTER: Desktop Navigation Links */}
           <nav className="hidden lg:flex items-center gap-6">
             {TOP_NAV_ITEMS.map((item) => {
               const isActive = pathname === item.href;
@@ -149,7 +157,7 @@ export function Navbar() {
             })}
           </nav>
 
-          {/* Right Action Icons & Controls */}
+          {/* RIGHT: Search + Favorites ONLY (No Profile Pill, No Account Chip, No Theme Toggle) */}
           <div className="flex items-center gap-3 md:gap-4">
             {/* Search Icon Trigger */}
             <button
@@ -161,7 +169,7 @@ export function Navbar() {
               <Search className="w-5 h-5 text-primary" />
             </button>
 
-            {/* Saved Movies Heart Icon ONLY */}
+            {/* Saved Movies Heart Icon */}
             <Link
               href="/favorites"
               className="p-2 rounded-full text-gray-300 hover:text-white hover:bg-white/10 transition-colors relative"
@@ -175,35 +183,14 @@ export function Navbar() {
                 </span>
               )}
             </Link>
-
-            {/* User Account / Login Button */}
-            {user ? (
-              <UserMenu />
-            ) : (
-              <Link
-                href="/login"
-                className="font-extrabold text-xs px-4 py-2 rounded-full bg-primary text-white hover:bg-primary/90 transition-colors shadow-[0_0_15px_rgba(216,33,50,0.3)]"
-              >
-                LOGIN
-              </Link>
-            )}
-
-            {/* Sidebar / Mobile Menu Drawer Button */}
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-full text-white hover:bg-white/10 transition-colors"
-              aria-label="Open navigation"
-            >
-              <Menu className="w-6 h-6" />
-            </button>
           </div>
         </div>
       </header>
 
-      {/* Unified Sidebar Component */}
+      {/* Unified Left Sidebar Component */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Global Search Modal */}
+      {/* Global Search & Location Modals */}
       <CitySelectorModal />
       <GlobalSearchModal isOpen={isSearchModalOpen} onClose={() => setIsSearchModalOpen(false)} />
     </>

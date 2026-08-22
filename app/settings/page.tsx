@@ -1,95 +1,97 @@
 "use client";
 
 import Link from 'next/link';
-import { Settings as SettingsIcon, Moon, Sun, Monitor, MapPin, HelpCircle, Shield, CheckCircle2 } from 'lucide-react';
-import { useTheme } from '@/context/ThemeContext';
+import { Settings as SettingsIcon, MapPin, HelpCircle, User, LogOut, ArrowRight, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useLocation } from '@/context/LocationContext';
 import { Button } from '@/components/ui/button';
 
 export default function SettingsPage() {
-  const { theme, setTheme } = useTheme();
-  const { user, setRole } = useAuth();
+  const { user, logout } = useAuth();
   const { location, setIsCityModalOpen } = useLocation();
 
-  const isVenueOwner = user?.role === 'venue_owner' || user?.role === 'admin';
+  const handleLogout = async () => {
+    await logout();
+  };
 
   return (
     <div className="min-h-screen pt-24 pb-20 bg-background">
-      <div className="container mx-auto px-4 md:px-6 max-w-3xl">
-        {/* Header */}
+      <div className="container mx-auto px-4 md:px-6 max-w-2xl">
+        {/* Page Header */}
         <div className="flex items-center gap-4 mb-8 pb-4 border-b border-white/10">
           <div className="w-12 h-12 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary">
             <SettingsIcon className="w-6 h-6" />
           </div>
           <div>
             <h1 className="text-2xl md:text-3xl font-bold font-heading text-white">App Settings</h1>
-            <p className="text-xs text-muted-foreground">Manage appearance, location preferences, and account permissions.</p>
+            <p className="text-xs text-muted-foreground">Manage your account profile, location preferences, and help options.</p>
           </div>
         </div>
 
         <div className="space-y-6">
-          {/* SECTION 1: APPEARANCE & THEME */}
+          {/* SECTION 1: USER PROFILE INFORMATION */}
           <div className="bg-secondary/30 border border-white/10 p-6 rounded-3xl space-y-4 shadow-xl">
             <div className="flex items-center justify-between pb-2 border-b border-white/10">
               <h3 className="font-bold text-base text-white font-heading flex items-center gap-2">
-                <Sun className="w-4 h-4 text-amber-400" /> Appearance Theme
+                <User className="w-4 h-4 text-primary" /> Profile Information
               </h3>
-              <span className="text-[10px] font-mono uppercase bg-white/5 px-2 py-0.5 rounded text-gray-400">
-                Active: {theme}
-              </span>
+              {user && (
+                <span className="text-[10px] font-mono uppercase bg-primary/20 text-primary px-2.5 py-0.5 rounded font-bold border border-primary/30">
+                  {user.role || 'customer'}
+                </span>
+              )}
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              <button
-                type="button"
-                onClick={() => setTheme('light')}
-                className={`p-4 rounded-2xl border text-xs font-bold flex flex-col items-center gap-2 transition-all ${
-                  theme === 'light'
-                    ? 'bg-amber-500/15 border-amber-500 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.2)]'
-                    : 'bg-black/40 border-white/10 text-gray-400 hover:text-white'
-                }`}
-              >
-                <Sun className="w-5 h-5 text-amber-400" />
-                <span>Light</span>
-              </button>
+            {user ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3.5 bg-black/40 p-4 rounded-2xl border border-white/10">
+                  {user.avatar ? (
+                    <img
+                      src={user.avatar}
+                      alt={user.name || 'User avatar'}
+                      className="w-12 h-12 rounded-full object-cover border-2 border-primary/50 shrink-0"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-rose-700 text-white font-extrabold flex items-center justify-center text-lg border-2 border-primary/50 shrink-0">
+                      {(user.name || user.email || 'U').charAt(0).toUpperCase()}
+                    </div>
+                  )}
 
-              <button
-                type="button"
-                onClick={() => setTheme('dark')}
-                className={`p-4 rounded-2xl border text-xs font-bold flex flex-col items-center gap-2 transition-all ${
-                  theme === 'dark'
-                    ? 'bg-primary/20 border-primary text-primary shadow-[0_0_15px_rgba(216,33,50,0.3)]'
-                    : 'bg-black/40 border-white/10 text-gray-400 hover:text-white'
-                }`}
-              >
-                <Moon className="w-5 h-5 text-primary" />
-                <span>Dark</span>
-              </button>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-sm text-white truncate">{user.name || 'TicketX User'}</p>
+                    <p className="text-xs text-muted-foreground truncate">{user.email || user.phone || 'No email associated'}</p>
+                    <p className="text-[10px] text-emerald-400 font-medium flex items-center gap-1 mt-0.5">
+                      <ShieldCheck className="w-3 h-3 text-emerald-400" /> Firebase Verified Account
+                    </p>
+                  </div>
 
-              <button
-                type="button"
-                onClick={() => setTheme('system')}
-                className={`p-4 rounded-2xl border text-xs font-bold flex flex-col items-center gap-2 transition-all ${
-                  theme === 'system'
-                    ? 'bg-emerald-500/15 border-emerald-500 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
-                    : 'bg-black/40 border-white/10 text-gray-400 hover:text-white'
-                }`}
-              >
-                <Monitor className="w-5 h-5 text-emerald-400" />
-                <span>Device Default</span>
-              </button>
-            </div>
-            <p className="text-[11px] text-gray-400">
-              Device Default automatically syncs TicketX with your OS/browser <code className="font-mono text-emerald-400">prefers-color-scheme</code>.
-            </p>
+                  <Link href="/profile">
+                    <Button variant="outline" size="sm" className="rounded-xl text-xs font-bold border-white/10 gap-1">
+                      Edit <ArrowRight className="w-3.5 h-3.5" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between bg-black/40 p-4 rounded-2xl border border-white/10">
+                <div>
+                  <p className="font-bold text-sm text-white">Not Logged In</p>
+                  <p className="text-xs text-muted-foreground">Sign in to sync your bookings and saved movies.</p>
+                </div>
+                <Link href="/login">
+                  <Button size="sm" className="rounded-xl text-xs font-bold">
+                    Login / Sign Up
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
 
-          {/* SECTION 2: SAVED LOCATIONS */}
+          {/* SECTION 2: LOCATION CONTEXT & PREFERENCES */}
           <div className="bg-secondary/30 border border-white/10 p-6 rounded-3xl space-y-4 shadow-xl">
             <div className="flex items-center justify-between pb-2 border-b border-white/10">
               <h3 className="font-bold text-base text-white font-heading flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-emerald-400" /> Location Context
+                <MapPin className="w-4 h-4 text-emerald-400" /> Location Preference
               </h3>
             </div>
 
@@ -109,53 +111,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* SECTION 3: ROLE PERMISSION MODE */}
-          <div className="bg-secondary/30 border border-white/10 p-6 rounded-3xl space-y-4 shadow-xl">
-            <div className="flex items-center justify-between pb-2 border-b border-white/10">
-              <h3 className="font-bold text-base text-white font-heading flex items-center gap-2">
-                <Shield className="w-4 h-4 text-amber-400" /> Account Mode &amp; Permissions
-              </h3>
-              <span className="text-[10px] font-mono uppercase bg-amber-500/20 text-amber-300 px-2.5 py-0.5 rounded font-bold border border-amber-500/30">
-                {user?.role || 'customer'}
-              </span>
-            </div>
-
-            <div className="space-y-3">
-              <p className="text-xs text-gray-300">
-                Toggle your account mode to test venue owner partner features (Register Your Hall in sidebar, My Venue Registrations):
-              </p>
-
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setRole('customer')}
-                  className={`flex-1 p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                    !isVenueOwner
-                      ? 'bg-primary/20 border-primary text-primary'
-                      : 'bg-black/40 border-white/10 text-gray-400 hover:text-white'
-                  }`}
-                >
-                  {!isVenueOwner && <CheckCircle2 className="w-3.5 h-3.5" />}
-                  <span>Customer Mode</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setRole('venue_owner')}
-                  className={`flex-1 p-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                    isVenueOwner
-                      ? 'bg-amber-500/20 border-amber-500 text-amber-300'
-                      : 'bg-black/40 border-white/10 text-gray-400 hover:text-white'
-                  }`}
-                >
-                  {isVenueOwner && <CheckCircle2 className="w-3.5 h-3.5" />}
-                  <span>Venue Owner Partner Mode</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* SECTION 4: HELP & SUPPORT LINKS */}
+          {/* SECTION 3: HELP & INFORMATION LINKS */}
           <div className="bg-secondary/30 border border-white/10 p-6 rounded-3xl space-y-4 shadow-xl">
             <h3 className="font-bold text-base text-white font-heading flex items-center gap-2 pb-2 border-b border-white/10">
               <HelpCircle className="w-4 h-4 text-primary" /> Support &amp; Information
@@ -172,10 +128,23 @@ export default function SettingsPage() {
                 Send Feedback
               </Link>
               <Link href="/partners" className="p-3.5 rounded-2xl bg-black/40 border border-white/10 hover:border-white/20 text-gray-200 block text-amber-300">
-                For Venue Owners &amp; Hall Registration
+                Partner Hall Registration Info
               </Link>
             </div>
           </div>
+
+          {/* SECTION 4: LOGOUT ACTION BUTTON */}
+          {user && (
+            <div className="pt-2">
+              <Button
+                onClick={handleLogout}
+                variant="outline"
+                className="w-full rounded-2xl py-5 font-bold text-xs text-rose-400 bg-rose-500/10 border-rose-500/20 hover:bg-rose-500/20 gap-2"
+              >
+                <LogOut className="w-4 h-4" /> Log Out of TicketX
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>
