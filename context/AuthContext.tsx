@@ -10,6 +10,7 @@ export interface TicketXUser {
   displayPhone?: string;
   avatar?: string;
   authMethod: 'email' | 'phone' | 'google';
+  role?: 'customer' | 'venue_owner' | 'admin';
   createdAt: string;
 }
 
@@ -28,6 +29,7 @@ interface AuthContextType {
   signupWithEmail: (name: string, email: string, pass: string) => { success: boolean; error?: string };
   loginWithGoogle: (customEmail?: string, customName?: string, customAvatar?: string) => void;
   updateUsername: (newName: string) => { success: boolean; error?: string };
+  setRole: (role: 'customer' | 'venue_owner' | 'admin') => void;
   logout: () => void;
 }
 
@@ -44,7 +46,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const saved = localStorage.getItem('ticketx_user');
     if (saved) {
       try {
-        setUser(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        setUser({ role: 'customer', ...parsed });
       } catch (e) {
         console.error(e);
       }
@@ -52,22 +55,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const saveUserSession = (u: TicketXUser) => {
-    setUser(u);
-    localStorage.setItem('ticketx_user', JSON.stringify(u));
+    const normalizedUser = { role: u.role || 'customer', ...u };
+    setUser(normalizedUser);
+    localStorage.setItem('ticketx_user', JSON.stringify(normalizedUser));
 
     // Save/update user in registry to prevent duplicate accounts
     try {
       const storedRegistry = localStorage.getItem(USERS_DB_KEY);
       const registry: Record<string, TicketXUser> = storedRegistry ? JSON.parse(storedRegistry) : {};
       if (u.email) {
-        registry[u.email.toLowerCase()] = u;
+        registry[u.email.toLowerCase()] = normalizedUser;
       }
       if (u.phone) {
-        registry[u.phone] = u;
+        registry[u.phone] = normalizedUser;
       }
       localStorage.setItem(USERS_DB_KEY, JSON.stringify(registry));
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const setRole = (role: 'customer' | 'venue_owner' | 'admin') => {
+    if (user) {
+      saveUserSession({ ...user, role });
     }
   };
 
@@ -130,6 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       phone: phoneFormatted,
       displayPhone: masked,
       authMethod: 'phone',
+      role: 'customer',
       createdAt: new Date().toISOString(),
     };
 
@@ -163,6 +174,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       name: formattedName,
       email: emailLower,
       authMethod: 'email',
+      role: 'customer',
       createdAt: new Date().toISOString(),
     };
 
@@ -182,6 +194,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       name: name.trim(),
       email: emailLower,
       authMethod: 'email',
+      role: 'customer',
       createdAt: new Date().toISOString(),
     };
 
@@ -189,7 +202,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: true };
   };
 
-  // Requirements 6, 7, 8: Real Google account linking (prevents duplicate accounts)
+  // Requirements 6, 7, 8: Real Google account linking
   const loginWithGoogle = (customEmail?: string, customName?: string, customAvatar?: string) => {
     const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
     if (googleClientId) {
@@ -226,6 +239,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       email,
       avatar,
       authMethod: 'google',
+      role: 'customer',
       createdAt: new Date().toISOString(),
     };
 
@@ -266,6 +280,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signupWithEmail,
         loginWithGoogle,
         updateUsername,
+        setRole,
         logout,
       }}
     >

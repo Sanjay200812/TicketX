@@ -7,45 +7,47 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           <div className="col-span-1 md:col-span-1">
             <Link href="/" className="inline-block mb-4">
-              <span className="text-2xl font-bold tracking-tighter text-white">
-                Ticket<span className="text-primary">X</span>
+              <span className="text-2xl font-bold tracking-tighter text-white font-heading">
+                TICKET<span className="text-primary">X</span>
               </span>
             </Link>
-            <p className="text-muted-foreground text-sm max-w-xs">
-              Your Seat. Your Show. Your TicketX. Movies begin before the screen lights up.
+            <p className="text-muted-foreground text-xs max-w-xs leading-relaxed">
+              Your Seat. Your Show. Your TicketX. Movies &amp; events begin before the screen lights up.
             </p>
           </div>
-          
+
           <div>
-            <h4 className="text-white font-semibold mb-4">Explore</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
+            <h4 className="text-white font-semibold text-sm mb-4">Explore</h4>
+            <ul className="space-y-2 text-xs text-muted-foreground">
               <li><Link href="/movies" className="hover:text-primary transition-colors">Movies</Link></li>
-              <li><Link href="#" className="hover:text-primary transition-colors">Theatres</Link></li>
-              <li><Link href="#" className="hover:text-primary transition-colors">Offers</Link></li>
+              <li><Link href="/events" className="hover:text-primary transition-colors">Events</Link></li>
+              <li><Link href="/theatres" className="hover:text-primary transition-colors">Theatres</Link></li>
+              <li><Link href="/favorites" className="hover:text-primary transition-colors">Saved Movies</Link></li>
             </ul>
           </div>
-          
+
           <div>
-            <h4 className="text-white font-semibold mb-4">Account</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/my-bookings" className="hover:text-primary transition-colors">My Bookings</Link></li>
-              <li><Link href="#" className="hover:text-primary transition-colors">Profile</Link></li>
-              <li><Link href="#" className="hover:text-primary transition-colors">Support</Link></li>
+            <h4 className="text-white font-semibold text-sm mb-4">Help &amp; Support</h4>
+            <ul className="space-y-2 text-xs text-muted-foreground">
+              <li><Link href="/support" className="hover:text-primary transition-colors">Support Hub</Link></li>
+              <li><Link href="/support/faq" className="hover:text-primary transition-colors">FAQ</Link></li>
+              <li><Link href="/support/feedback" className="hover:text-primary transition-colors">Send Feedback</Link></li>
+              <li><Link href="/settings" className="hover:text-primary transition-colors">Settings &amp; Theme</Link></li>
             </ul>
           </div>
-          
+
           <div>
-            <h4 className="text-white font-semibold mb-4">Legal</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="#" className="hover:text-primary transition-colors">Terms of Service</Link></li>
-              <li><Link href="#" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
+            <h4 className="text-white font-semibold text-sm mb-4">Partners &amp; Venue Owners</h4>
+            <ul className="space-y-2 text-xs text-muted-foreground">
+              <li><Link href="/partners" className="text-amber-400 hover:underline transition-colors font-bold">Partner with TicketX</Link></li>
+              <li><Link href="/register" className="hover:text-primary transition-colors">Register Your Hall</Link></li>
             </ul>
           </div>
         </div>
-        
+
         <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-          <p>© {new Date().getFullYear()} TicketX Prototype. All rights reserved.</p>
-          <p>Designed for Cinematic Excellence</p>
+          <p>© {new Date().getFullYear()} TicketX. All rights reserved.</p>
+          <p className="font-mono text-[11px]">Andhra Pradesh • Narasaraopeta • Guntur • Vijayawada</p>
         </div>
       </div>
     </footer>

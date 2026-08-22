@@ -38,7 +38,6 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
     const catLower = (sec.name || '').toLowerCase();
 
     if (isNRT) {
-      // NRT Theatres: Gold ₹295, Silver ₹150, On Land Luxury ₹1,116 (Requirement 1, 2)
       if (catLower.includes('luxury') || catLower.includes('land') || key === 'onLand') {
         return { ...sec, name: 'On Land Luxury Recliner', price: 1116, categoryKey: 'onLand' };
       }
@@ -47,7 +46,6 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
       }
       return { ...sec, name: 'Silver Class', price: 150, categoryKey: 'silver' };
     } else {
-      // Other Cities: ONLY 2 Categories (Gold ₹295 Top / Silver ₹150 Middle) (Requirement 3, 4)
       if (catLower.includes('gold') || key === 'gold' || catLower.includes('luxury') || catLower.includes('land') || key === 'onLand') {
         return { ...sec, name: 'Gold Class', price: 295, categoryKey: 'gold' };
       }
@@ -55,7 +53,6 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
     }
   });
 
-  // Sort sections strictly in required vertical order: GOLD (Top) -> SILVER (Middle) -> ON LAND LUXURY (Bottom)
   const normalizedSections: SeatSection[] = [...rawSections].sort((a, b) => {
     const orderScore = (s: SeatSection) => {
       const name = s.name.toLowerCase();
@@ -66,8 +63,6 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
     };
     return orderScore(a) - orderScore(b);
   });
-
-  const hasLuxury = isNRT && normalizedSections.some((s) => s.name.toLowerCase().includes('land') || s.name.toLowerCase().includes('luxury'));
 
   // Real-time polling sync for seat availability
   useEffect(() => {
@@ -108,8 +103,14 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
 
   return (
     <div className="w-full max-w-5xl mx-auto flex flex-col items-center select-none relative">
-      {/* Floating Temporary Navigation Minimap */}
-      <TemporaryMinimap containerRef={scrollContainerRef} hasLuxury={hasLuxury} />
+      {/* Floating Temporary Navigation Minimap (Reference 1 Real Seat Dots Style) */}
+      <TemporaryMinimap
+        containerRef={scrollContainerRef}
+        sections={normalizedSections}
+        realtimeBooked={realtimeBooked}
+        realtimeHeld={realtimeHeld}
+        selectedSeats={selectedSeats}
+      />
 
       {/* Layout Header Info & Capacity Display */}
       <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3 mb-6 pb-4 border-b border-white/10 text-xs">
@@ -137,7 +138,7 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
       {/* Legend */}
       <SeatLegend sections={normalizedSections} />
 
-      {/* AUDITORIUM THEATRE ENTRANCE CORRIDOR (Requirement 9, 11 - EXIT MARKER REMOVED) */}
+      {/* AUDITORIUM THEATRE ENTRANCE CORRIDOR */}
       <div className="w-full max-w-4xl flex items-center justify-start mb-4 px-2">
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/30 text-xs font-bold font-mono shadow-md">
           <DoorOpen className="w-4 h-4 text-amber-400" />

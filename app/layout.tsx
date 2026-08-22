@@ -6,6 +6,8 @@ import { Footer } from "@/components/layout/Footer";
 import { LocationProvider } from "@/context/LocationContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { FavoritesProvider } from "@/context/FavoritesContext";
+import { ThemeProvider } from "@/context/ThemeContext";
+import { SupportChatbot } from "@/components/support/SupportChatbot";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-heading" });
@@ -23,17 +25,20 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${inter.variable} ${spaceGrotesk.variable} font-sans min-h-screen bg-background text-foreground flex flex-col`}>
-        <AuthProvider>
-          <LocationProvider>
-            <FavoritesProvider>
-              <Navbar />
-              <main className="flex-1">
-                {children}
-              </main>
-              <Footer />
-            </FavoritesProvider>
-          </LocationProvider>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <LocationProvider>
+              <FavoritesProvider>
+                <Navbar />
+                <main className="flex-1">
+                  {children}
+                </main>
+                <SupportChatbot />
+                <Footer />
+              </FavoritesProvider>
+            </LocationProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
