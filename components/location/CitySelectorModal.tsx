@@ -264,24 +264,27 @@ export function CitySelectorModal() {
                             </div>
                           </button>
 
-                          <div className="flex items-center gap-1">
-                            {/* Requirement 2: Explicit Save Location Button */}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {/* Star Save Button: Remove word 'Save' completely, keep clean star icon */}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 toggleSaveLocation(loc.id);
                               }}
-                              className={`px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all border ${
-                                isSaved
-                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
-                                  : 'bg-black/30 text-gray-400 border-white/10 hover:text-white hover:border-white/20'
-                              }`}
-                              title={isSaved ? 'Remove from saved' : 'Save location'}
+                              className="p-1.5 rounded-full hover:bg-white/10 transition-colors flex items-center justify-center focus:outline-none"
+                              title={isSaved ? 'Remove saved location' : 'Save location'}
+                              aria-label={isSaved ? 'Remove saved location' : 'Save location'}
                             >
-                              <Star className={`w-3 h-3 ${isSaved ? 'fill-amber-400 text-amber-400' : 'text-gray-400'}`} />
-                              <span>{isSaved ? 'Saved' : 'Save'}</span>
+                              <Star
+                                className={`w-4 h-4 transition-all ${
+                                  isSaved
+                                    ? 'text-primary fill-primary drop-shadow-[0_0_6px_rgba(216,33,50,0.6)]'
+                                    : 'text-gray-400 hover:text-white'
+                                }`}
+                              />
                             </button>
-                            {isSelected && <Check className="w-4 h-4 text-primary shrink-0 ml-1" />}
+                            {/* Separate Checkmark indicator for current active location */}
+                            {isSelected && <Check className="w-4 h-4 text-primary shrink-0" />}
                           </div>
                         </div>
                       );
