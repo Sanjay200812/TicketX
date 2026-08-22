@@ -19,7 +19,7 @@ export default function SupportHubPage() {
         </div>
 
         {/* Support Grid Options */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <Link
             href="/support/faq"
             className="bg-secondary/40 border border-white/10 hover:border-emerald-500/40 rounded-3xl p-6 transition-all group flex items-start gap-4"
@@ -29,13 +29,33 @@ export default function SupportHubPage() {
             </div>
             <div className="flex-1">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold text-lg text-white group-hover:text-emerald-400 transition-colors">
-                  Frequently Asked Questions (FAQ)
+                <h3 className="font-bold text-base text-white group-hover:text-emerald-400 transition-colors">
+                  FAQ &amp; Knowledge Base
                 </h3>
                 <ChevronRight className="w-4 h-4 text-gray-500 group-hover:translate-x-1 transition-transform" />
               </div>
               <p className="text-xs text-gray-400 mt-1">
-                Find quick answers regarding max 10 seat limits, seat holds, ₹20/ticket + 18% IGST booking fees, and pass downloads.
+                Quick answers regarding seat limits, holds, ₹20/ticket + 18% IGST booking fees, and pass downloads.
+              </p>
+            </div>
+          </Link>
+
+          <Link
+            href="/support/contact"
+            className="bg-secondary/40 border border-white/10 hover:border-primary/40 rounded-3xl p-6 transition-all group flex items-start gap-4"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-primary/15 border border-primary/30 text-primary flex items-center justify-center shrink-0">
+              <HelpCircle className="w-6 h-6" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-base text-white group-hover:text-primary transition-colors">
+                  Contact Us
+                </h3>
+                <ChevronRight className="w-4 h-4 text-gray-500 group-hover:translate-x-1 transition-transform" />
+              </div>
+              <p className="text-xs text-gray-400 mt-1">
+                Send a direct enquiry or request assistance with bookings, payments, or theatre issues.
               </p>
             </div>
           </Link>
@@ -49,8 +69,8 @@ export default function SupportHubPage() {
             </div>
             <div className="flex-1">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold text-lg text-white group-hover:text-rose-400 transition-colors">
-                  Send Feedback &amp; Suggestions
+                <h3 className="font-bold text-base text-white group-hover:text-rose-400 transition-colors">
+                  Send Feedback
                 </h3>
                 <ChevronRight className="w-4 h-4 text-gray-500 group-hover:translate-x-1 transition-transform" />
               </div>

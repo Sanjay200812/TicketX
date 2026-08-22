@@ -63,6 +63,17 @@ export default function EventsPage() {
             </button>
 
             <button
+              onClick={() => setSelectedFilterCity('guntur')}
+              className={`px-5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
+                selectedFilterCity === 'guntur'
+                  ? 'bg-primary text-white border-primary shadow-[0_0_12px_rgba(216,33,50,0.4)]'
+                  : 'bg-secondary/60 text-gray-400 hover:text-white border-white/10'
+              }`}
+            >
+              Guntur (Aakash Marriage)
+            </button>
+
+            <button
               onClick={() => setSelectedFilterCity('nrt')}
               className={`px-5 py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
                 selectedFilterCity === 'nrt'

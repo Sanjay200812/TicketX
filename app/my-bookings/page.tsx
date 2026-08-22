@@ -180,7 +180,7 @@ export default function MyBookingsPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {filteredBookings.map((booking, i) => {
-                  const isEventBooking = booking.id.includes('EV') || booking.movieTitle.includes('Freshers') || booking.movieTitle.includes('StarX');
+                  const isEventBooking = booking.id.includes('EV') || booking.movieTitle.includes('Freshers') || booking.movieTitle.includes('StarX') || booking.movieTitle.includes('Aakash') || booking.movieTitle.includes('Marriage');
 
                   return (
                     <motion.div

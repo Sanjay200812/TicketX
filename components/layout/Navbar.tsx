@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Search, Menu, MapPin, ChevronDown, Heart } from 'lucide-react';
+import { Search, Menu, MapPin, ChevronDown, Heart, Ticket } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from '@/context/LocationContext';
+import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import { CitySelectorModal } from '@/components/location/CitySelectorModal';
 import { GlobalSearchModal } from '@/components/search/GlobalSearchModal';
@@ -24,6 +25,7 @@ export function Navbar() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { selectedLocation, setIsCityModalOpen } = useLocation();
+  const { user } = useAuth();
   const { favoriteIds } = useFavorites();
 
   useEffect(() => {
@@ -53,13 +55,13 @@ export function Navbar() {
         )}
       >
         <div className="container mx-auto px-4 md:px-6 flex items-center justify-between" ref={dropdownRef}>
-          {/* LEFT: Sidebar Opener (Hamburger Button) + Logo + City Selector (Requirements 1, 2) */}
+          {/* LEFT: Sidebar Opener (Hamburger Button) + Logo + City Selector */}
           <div className="flex items-center gap-3 md:gap-4">
             {/* Hamburger / Sidebar Menu Button on Left */}
             <button
               onClick={() => setSidebarOpen(true)}
               className="p-2 rounded-xl text-white hover:bg-white/10 transition-colors flex items-center justify-center focus:outline-none"
-              aria-label="Open sidebar menu"
+              aria-label="Open navigation drawer"
               title="Menu"
             >
               <Menu className="w-6 h-6 text-white" />
@@ -157,22 +159,22 @@ export function Navbar() {
             })}
           </nav>
 
-          {/* RIGHT: Search + Favorites ONLY (No Profile Pill, No Account Chip, No Theme Toggle) */}
-          <div className="flex items-center gap-3 md:gap-4">
+          {/* RIGHT: Search | ♡ Saved Movies | 🎟 My Bookings | Login / Compact Avatar */}
+          <div className="flex items-center gap-2.5 md:gap-3.5">
             {/* Search Icon Trigger */}
             <button
               onClick={() => setIsSearchModalOpen(true)}
-              className="text-gray-300 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10 flex items-center gap-1.5 text-xs font-semibold"
+              className="text-gray-300 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10 flex items-center justify-center"
               title="Search Movies, Theatres & Events"
               aria-label="Search"
             >
               <Search className="w-5 h-5 text-primary" />
             </button>
 
-            {/* Saved Movies Heart Icon */}
+            {/* Saved Movies Heart Icon ONLY */}
             <Link
               href="/favorites"
-              className="p-2 rounded-full text-gray-300 hover:text-white hover:bg-white/10 transition-colors relative"
+              className="p-2 rounded-full text-gray-300 hover:text-white hover:bg-white/10 transition-colors relative flex items-center justify-center"
               title="Saved Movies"
               aria-label="Saved Movies"
             >
@@ -183,6 +185,41 @@ export function Navbar() {
                 </span>
               )}
             </Link>
+
+            {/* My Bookings Icon Control (Requirement 1) */}
+            <Link
+              href={user ? "/my-bookings" : "/login?redirect=/my-bookings"}
+              className="p-2 rounded-full text-gray-300 hover:text-white hover:bg-white/10 transition-colors relative flex items-center justify-center"
+              title="My Bookings"
+              aria-label="My Bookings"
+            >
+              <Ticket className="w-5 h-5 text-amber-400" />
+            </Link>
+
+            {/* Login / Compact Account Control (Requirements 2, 3) */}
+            {user ? (
+              <Link
+                href="/profile"
+                className="p-1 rounded-full border border-primary/40 text-white hover:bg-white/10 transition-all flex items-center justify-center ml-1"
+                title={user.name || "Profile"}
+                aria-label="Profile"
+              >
+                {user.avatar ? (
+                  <img src={user.avatar} alt={user.name || "User"} className="w-6 h-6 rounded-full object-cover" />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-primary text-white font-extrabold flex items-center justify-center text-[10px]">
+                    {(user.name || user.email || 'U').charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="font-extrabold text-xs px-3.5 py-1.5 rounded-full bg-primary text-white hover:bg-primary/90 transition-colors shadow-[0_0_12px_rgba(216,33,50,0.3)] ml-1"
+              >
+                Login
+              </Link>
+            )}
           </div>
         </div>
       </header>

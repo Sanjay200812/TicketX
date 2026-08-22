@@ -2,6 +2,30 @@ import { TicketXEvent } from '../types/event';
 
 export const events: TicketXEvent[] = [
   {
+    id: "aakash-marriage",
+    name: "Aakash Marriage",
+    title: "Aakash Marriage",
+    cityId: "guntur",
+    cityName: "Guntur",
+    venue: "Grand Convention Center, Guntur",
+    date: "2026-09-10",
+    time: "06:00 PM",
+    eventType: "Marriage / Celebration",
+    poster: "https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=800&auto=format&fit=crop",
+    capacity: 1000,
+    startingPrice: 50000,
+    priceFrom: 50000,
+    pricing: {
+      silver: 50000,
+      gold: 74999,
+      premium: 99999,
+    },
+    bookingEnabled: true,
+    description: "Grand wedding reception & celebration event in Guntur featuring banquet dining, live music performances, and luxury stage hospitality.",
+    organizer: "Aakash Family Celebrations",
+  },
+  {
     id: "nec-freshers",
     name: "NEC Freshers",
     title: "NEC Freshers",

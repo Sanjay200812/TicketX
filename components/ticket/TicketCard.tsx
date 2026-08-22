@@ -123,9 +123,16 @@ export function TicketCard({ ticket: rawTicket, booking, className = '' }: Ticke
         {/* Screen & Seat Info Breakdown */}
         <div className="grid grid-cols-2 gap-3 text-xs font-mono">
           <div className="bg-white/5 p-3 rounded-xl border border-white/10">
-            <span className="text-[10px] text-muted-foreground block uppercase font-bold">Screen</span>
-            <span className="font-extrabold text-white text-sm flex items-center gap-1 mt-0.5">
-              <Tv className="w-3.5 h-3.5 text-primary" /> {ticketData.screenName || 'SCREEN 1'}
+            <span className="text-[10px] text-muted-foreground block uppercase font-bold">
+              {ticketData.movieTitle.toLowerCase().includes('marriage') ||
+              ticketData.movieTitle.toLowerCase().includes('event') ||
+              ticketData.movieTitle.toLowerCase().includes('freshers') ||
+              ticketData.movieTitle.toLowerCase().includes('starx')
+                ? 'ZONE / SECTION'
+                : 'Screen'}
+            </span>
+            <span className="font-extrabold text-white text-sm flex items-center gap-1 mt-0.5 truncate">
+              <Tv className="w-3.5 h-3.5 text-primary shrink-0" /> {ticketData.screenName || 'HALL ZONE'}
             </span>
           </div>
           <div className="bg-white/5 p-3 rounded-xl border border-white/10">

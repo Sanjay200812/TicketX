@@ -208,15 +208,15 @@ export async function downloadTicketPdf(booking: Booking, userName?: string): Pr
       </div>
 
       <div class="qr-box">
-        <div style="font-size:11px; font-weight:700; color:#e2e8f0;">Scan QR Code at Theatre Entry</div>
+        <div style="font-size:11px; font-weight:700; color:#e2e8f0;">${booking.movieTitle.toLowerCase().includes('marriage') || booking.movieTitle.toLowerCase().includes('freshers') || booking.movieTitle.toLowerCase().includes('starx') ? 'Scan QR Code at Event Entry' : 'Scan QR Code at Theatre Entry'}</div>
         <img class="qr-img" src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(booking.id)}" alt="QR Code" />
         <div class="qr-text">Booking ID: <strong style="color:#fff;">${booking.id}</strong></div>
       </div>
 
       <div class="info-grid">
         <div class="info-card">
-          <div class="info-label">Screen</div>
-          <div class="info-value">${booking.screen || 'SCREEN 1'}</div>
+          <div class="info-label">${booking.movieTitle.toLowerCase().includes('marriage') || booking.movieTitle.toLowerCase().includes('freshers') || booking.movieTitle.toLowerCase().includes('starx') ? 'ZONE / SECTION' : 'Screen'}</div>
+          <div class="info-value">${booking.screen || 'HALL ZONE'}</div>
         </div>
         <div class="info-card">
           <div class="info-label">Customer</div>

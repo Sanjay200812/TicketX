@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { User, LogOut, Ticket, MapPin, ChevronRight, Edit3, CheckCircle2, AlertCircle, Store, Clock } from 'lucide-react';
+import { LogOut, Ticket, MapPin, ChevronRight, Edit3, CheckCircle2, AlertCircle, Store, Clock, Heart } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useLocation } from '@/context/LocationContext';
 import { getBookings } from '@/lib/storage';
@@ -25,6 +25,8 @@ export default function ProfilePage() {
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const isVenueOwner = user?.role === 'venue_owner' || user?.role === 'admin';
+
   useEffect(() => {
     if (!user) {
       router.push('/login');
@@ -33,22 +35,23 @@ export default function ProfilePage() {
     setBookings(getBookings());
     setUsernameInput(user.name || '');
 
-    // Fetch user venue registrations (Requirement 53)
-    const fetchRegistrations = async () => {
-      try {
-        const query = user.id ? `userId=${encodeURIComponent(user.id)}` : `email=${encodeURIComponent(user.email || '')}`;
-        const res = await fetch(`/api/register-venue?${query}`);
-        if (res.ok) {
-          const data = await res.json();
-          setVenueRegistrations(data.registrations || []);
+    if (isVenueOwner) {
+      const fetchRegistrations = async () => {
+        try {
+          const query = user.id ? `userId=${encodeURIComponent(user.id)}` : `email=${encodeURIComponent(user.email || '')}`;
+          const res = await fetch(`/api/register-venue?${query}`);
+          if (res.ok) {
+            const data = await res.json();
+            setVenueRegistrations(data.registrations || []);
+          }
+        } catch (err) {
+          console.error('Failed to fetch user venue registrations:', err);
         }
-      } catch (err) {
-        console.error('Failed to fetch user venue registrations:', err);
-      }
-    };
+      };
 
-    fetchRegistrations();
-  }, [user, router]);
+      fetchRegistrations();
+    }
+  }, [user, router, isVenueOwner]);
 
   if (!user) return null;
 
@@ -74,9 +77,18 @@ export default function ProfilePage() {
         {/* User Account Header */}
         <div className="bg-secondary/40 border border-white/10 rounded-2xl p-6 md:p-8 mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shadow-[0_0_20px_rgba(216,33,50,0.3)]">
-              <User className="w-8 h-8" />
-            </div>
+            {user.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.name || 'User avatar'}
+                className="w-16 h-16 rounded-full object-cover border-2 border-primary/50 shrink-0"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-rose-700 text-white font-extrabold flex items-center justify-center text-xl border-2 border-primary/50 shrink-0">
+                {(user.name || user.email || 'U').charAt(0).toUpperCase()}
+              </div>
+            )}
+
             <div>
               <h1 className="text-2xl font-bold font-heading text-white flex items-center gap-2">
                 <span>{user.name || 'My TicketX Account'}</span>
@@ -99,7 +111,7 @@ export default function ProfilePage() {
               logout();
               router.push('/');
             }}
-            className="rounded-xl border-white/10 text-gray-300 hover:text-white hover:bg-white/5 gap-2 font-bold"
+            className="rounded-xl border-white/10 text-gray-300 hover:text-white hover:bg-white/5 gap-2 font-bold text-xs"
           >
             <LogOut className="w-4 h-4" /> Logout
           </Button>
@@ -147,23 +159,38 @@ export default function ProfilePage() {
             </div>
 
             <div className="flex gap-3 pt-2">
-              <Button type="submit" className="rounded-xl font-bold px-6">
+              <Button type="submit" className="rounded-xl font-bold px-6 text-xs">
                 SAVE CHANGES
               </Button>
             </div>
           </form>
         )}
 
+        {/* User Account Navigation Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           <Link
             href="/my-bookings"
-            className="bg-secondary/30 border border-white/10 hover:border-primary/40 rounded-xl p-5 flex items-center justify-between transition-all group"
+            className="bg-secondary/30 border border-white/10 hover:border-primary/40 rounded-2xl p-5 flex items-center justify-between transition-all group shadow-lg"
           >
             <div className="flex items-center gap-3">
-              <Ticket className="w-5 h-5 text-primary" />
+              <Ticket className="w-5 h-5 text-amber-400" />
               <div>
-                <p className="font-bold text-white group-hover:text-primary transition-colors">My Bookings</p>
+                <p className="font-bold text-white group-hover:text-amber-400 transition-colors text-sm">My Bookings</p>
                 <p className="text-xs text-muted-foreground">{bookings.length} Saved Passes</p>
+              </div>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+          </Link>
+
+          <Link
+            href="/favorites"
+            className="bg-secondary/30 border border-white/10 hover:border-rose-500/40 rounded-2xl p-5 flex items-center justify-between transition-all group shadow-lg"
+          >
+            <div className="flex items-center gap-3">
+              <Heart className="w-5 h-5 text-rose-500 fill-rose-500" />
+              <div>
+                <p className="font-bold text-white group-hover:text-rose-400 transition-colors text-sm">Saved Movies</p>
+                <p className="text-xs text-muted-foreground">My Favorites List</p>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
@@ -171,41 +198,27 @@ export default function ProfilePage() {
 
           <button
             onClick={() => setIsCityModalOpen(true)}
-            className="bg-secondary/30 border border-white/10 hover:border-primary/40 rounded-xl p-5 flex items-center justify-between transition-all group text-left"
+            className="bg-secondary/30 border border-white/10 hover:border-primary/40 rounded-2xl p-5 flex items-center justify-between transition-all group text-left shadow-lg"
           >
             <div className="flex items-center gap-3">
-              <MapPin className="w-5 h-5 text-primary" />
+              <MapPin className="w-5 h-5 text-emerald-400" />
               <div>
-                <p className="font-bold text-white group-hover:text-primary transition-colors">Saved Location</p>
+                <p className="font-bold text-white group-hover:text-emerald-400 transition-colors text-sm">Saved Location</p>
                 <p className="text-xs text-muted-foreground">{location.city.name}</p>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
           </button>
-
-          <Link
-            href="/register"
-            className="bg-secondary/30 border border-white/10 hover:border-amber-500/40 rounded-xl p-5 flex items-center justify-between transition-all group"
-          >
-            <div className="flex items-center gap-3">
-              <Store className="w-5 h-5 text-amber-400" />
-              <div>
-                <p className="font-bold text-white group-hover:text-amber-400 transition-colors">Register Hall</p>
-                <p className="text-xs text-muted-foreground">List your theatre or venue</p>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-          </Link>
         </div>
 
-        {/* SECTION: MY VENUE REGISTRATIONS (Requirement 53) */}
-        {venueRegistrations.length > 0 && (
+        {/* SECTION: MY VENUE REGISTRATIONS (Visible ONLY for venue_owner or admin) */}
+        {isVenueOwner && venueRegistrations.length > 0 && (
           <div className="bg-secondary/40 border border-white/10 rounded-2xl p-6 md:p-8 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <h3 className="font-bold text-lg text-white font-heading flex items-center gap-2">
                 <Store className="w-5 h-5 text-amber-400" /> My Venue Registrations ({venueRegistrations.length})
               </h3>
-              <span className="text-xs font-mono text-muted-foreground uppercase">CLIENT ENQUIRIES</span>
+              <span className="text-xs font-mono text-muted-foreground uppercase">PARTNER PORTAL</span>
             </div>
 
             <div className="space-y-3">

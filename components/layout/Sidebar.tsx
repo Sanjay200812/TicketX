@@ -17,6 +17,7 @@ import {
   HelpCircle,
   FileQuestion,
   MessageSquare,
+  Mail,
   Store,
   ChevronDown,
   ChevronRight,
@@ -48,6 +49,7 @@ const ICON_MAP: Record<string, React.ComponentType<LucideProps>> = {
   HelpCircle,
   FileQuestion,
   MessageSquare,
+  Mail,
   Store,
   Building,
 };

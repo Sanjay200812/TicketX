@@ -98,6 +98,7 @@ export const SIDEBAR_NAV_SECTIONS: NavSection[] = [
       { label: 'Support', href: '/support', icon: 'HelpCircle' },
       { label: 'FAQ', href: '/support/faq', icon: 'FileQuestion' },
       { label: 'Feedback', href: '/support/feedback', icon: 'MessageSquare' },
+      { label: 'Contact Us', href: '/support/contact', icon: 'Mail' },
     ],
   },
   {
