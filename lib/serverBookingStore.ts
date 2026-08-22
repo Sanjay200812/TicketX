@@ -342,12 +342,12 @@ export function confirmBooking(params: {
     }
   }
 
-  // Server-side recalculation of prices
+  // Server-side recalculation of prices (Requirement 2: Fixed ₹69 booking fee per booking)
   const subtotal = params.seatPrices.reduce((acc, s) => acc + s.price, 0);
-  const bookingFee = params.seatCodes.length * 69; // ₹69 per ticket
-  const taxableAmount = subtotal + bookingFee;
-  const tax = Math.round(taxableAmount * 0.18 * 100) / 100;
-  const grandTotal = Math.round((taxableAmount + tax) * 100) / 100;
+  const bookingFee = 69; // Fixed total booking fee (Base ₹50 + IGST ₹19)
+  const taxableAmount = subtotal;
+  const tax = 19;
+  const grandTotal = subtotal + bookingFee;
 
   // Update seats to permanently booked (Requirement 11)
   params.seatCodes.forEach((code) => {

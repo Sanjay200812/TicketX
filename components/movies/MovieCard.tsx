@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Star, Ticket } from 'lucide-react';
+import { Star, Ticket, Heart } from 'lucide-react';
 import { Movie } from '@/types/movie';
 import { MoviePoster } from '@/components/shared/MoviePoster';
+import { useFavorites } from '@/context/FavoritesContext';
 
 interface MovieCardProps {
   movie: Movie;
@@ -12,6 +13,9 @@ interface MovieCardProps {
 }
 
 export function MovieCard({ movie, index = 0 }: MovieCardProps) {
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const saved = isFavorite(movie.id);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -27,6 +31,25 @@ export function MovieCard({ movie, index = 0 }: MovieCardProps) {
           rating={movie.rating}
           className="w-full h-full transform group-hover:scale-105 transition-transform duration-500"
         />
+
+        {/* Favorite Save Button Top Left (Requirement 1) */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleFavorite(movie.id);
+          }}
+          className={`absolute top-3 left-3 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all shadow-lg border ${
+            saved
+              ? 'bg-rose-600 text-white border-rose-400 shadow-[0_0_12px_rgba(225,29,72,0.8)]'
+              : 'bg-black/70 backdrop-blur-md text-gray-300 border-white/20 hover:text-white hover:border-white/40'
+          }`}
+          title={saved ? 'Remove from Saved' : 'Save Movie'}
+        >
+          <Heart className={`w-3.5 h-3.5 ${saved ? 'fill-white text-white' : 'text-gray-300'}`} />
+          <span>{saved ? 'Saved' : 'Save'}</span>
+        </button>
 
         {/* Hover Quick Action Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">

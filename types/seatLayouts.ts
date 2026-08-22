@@ -1,5 +1,5 @@
 export type SeatStatus = 'available' | 'booked' | 'selected' | 'blocked';
-export type SeatCategoryKey = 'premium' | 'gold' | 'onLand';
+export type SeatCategoryKey = 'premium' | 'gold' | 'onLand' | 'silver';
 
 export interface TicketXSeatItem {
   number: number;
@@ -18,11 +18,13 @@ export interface TicketXSeatRow {
 export interface TicketXSeatSection {
   id: string;
   categoryKey: SeatCategoryKey;
-  name: string; // e.g. "Premium Class", "Gold Class", "On Land Luxury Recliner"
+  name: string; // e.g. "Silver Class", "Gold Class", "On Land Luxury Recliner"
   price: number;
   description?: string;
   rows: TicketXSeatRow[];
 }
+
+export type SeatSection = TicketXSeatSection;
 
 export interface TicketXSeatLayout {
   id: string;

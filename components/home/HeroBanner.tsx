@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Ticket, Star, ChevronLeft, ChevronRight, Play } from 'lucide-react';
+import { Ticket, Star, ChevronLeft, ChevronRight, Play, Heart } from 'lucide-react';
 import { Movie } from '@/types/movie';
 import { Button } from '@/components/ui/button';
+import { useFavorites } from '@/context/FavoritesContext';
 
 interface HeroBannerProps {
   movies: Movie[];
@@ -14,6 +15,7 @@ interface HeroBannerProps {
 export function HeroBanner({ movies }: HeroBannerProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   const heroMovies = movies.length > 0 ? movies : [
     {
@@ -45,6 +47,7 @@ export function HeroBanner({ movies }: HeroBannerProps) {
   }, [handleNext, isPaused, heroMovies.length]);
 
   const currentMovie = heroMovies[currentIndex] || heroMovies[0];
+  const isSaved = isFavorite(currentMovie.id);
 
   return (
     <div
@@ -119,7 +122,7 @@ export function HeroBanner({ movies }: HeroBannerProps) {
               )}
 
               {/* Buttons */}
-              <div className="flex items-center gap-4 pt-2">
+              <div className="flex flex-wrap items-center gap-3 pt-2">
                 <Button asChild size="lg" className="rounded-full font-bold px-8 gap-2 shadow-[0_0_20px_rgba(216,33,50,0.4)]">
                   <Link href={`/shows/${currentMovie.id}`}>
                     <Ticket className="w-4 h-4" /> Book Tickets Now
@@ -130,6 +133,18 @@ export function HeroBanner({ movies }: HeroBannerProps) {
                   <Link href={`/movies/${currentMovie.id}`}>
                     <Play className="w-4 h-4 fill-white" /> View Details
                   </Link>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => toggleFavorite(currentMovie.id)}
+                  className={`rounded-full border-white/20 font-bold gap-2 transition-all ${
+                    isSaved ? 'bg-rose-600 border-rose-500 text-white shadow-[0_0_15px_rgba(225,29,72,0.6)]' : 'text-white hover:bg-white/10'
+                  }`}
+                >
+                  <Heart className={`w-4 h-4 ${isSaved ? 'fill-white text-white' : 'text-gray-300'}`} />
+                  {isSaved ? 'Saved' : 'Save'}
                 </Button>
               </div>
             </motion.div>

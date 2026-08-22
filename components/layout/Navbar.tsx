@@ -2,20 +2,22 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Search, User, Menu, MapPin, ChevronDown, X, LogOut, Ticket } from 'lucide-react';
+import { Search, User, Menu, MapPin, ChevronDown, X, LogOut, Ticket, Heart } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from '@/context/LocationContext';
 import { useAuth } from '@/context/AuthContext';
+import { useFavorites } from '@/context/FavoritesContext';
 import { CitySelectorModal } from '@/components/location/CitySelectorModal';
 
 export function Navbar() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { location, setIsCityModalOpen } = useLocation();
+  const { selectedLocation, setIsCityModalOpen } = useLocation();
   const { user, logout } = useAuth();
+  const { favoriteIds } = useFavorites();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -29,6 +31,7 @@ export function Navbar() {
     { name: 'Movies', href: '/movies' },
     { name: 'Events', href: '/events' },
     { name: 'Theatres', href: '/theatres' },
+    { name: 'Favorites', href: '/favorites' },
   ];
 
   return (
@@ -53,7 +56,7 @@ export function Navbar() {
               className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-secondary/80 hover:bg-secondary text-gray-200 border border-white/10 transition-all"
             >
               <MapPin className="w-3.5 h-3.5 text-primary" />
-              <span>{location.city.name}</span>
+              <span>{selectedLocation?.name || 'Select City'}</span>
               <ChevronDown className="w-3 h-3 text-muted-foreground" />
             </button>
           </div>
@@ -67,11 +70,19 @@ export function Navbar() {
                   key={link.name}
                   href={link.href}
                   className={cn(
-                    'text-sm font-medium transition-colors hover:text-white relative',
+                    'text-sm font-medium transition-colors hover:text-white relative flex items-center gap-1.5',
                     isActive ? 'text-white' : 'text-gray-400'
                   )}
                 >
+                  {link.name === 'Favorites' && (
+                    <Heart className={`w-3.5 h-3.5 ${favoriteIds.length > 0 ? 'text-rose-500 fill-rose-500' : 'text-gray-400'}`} />
+                  )}
                   {link.name}
+                  {link.name === 'Favorites' && favoriteIds.length > 0 && (
+                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-rose-600 text-white font-bold">
+                      {favoriteIds.length}
+                    </span>
+                  )}
                   {isActive && (
                     <motion.div
                       layoutId="navbar-indicator"
@@ -85,8 +96,16 @@ export function Navbar() {
 
           {/* Right Actions */}
           <div className="flex items-center gap-4">
-            <Link href="/movies" className="text-gray-300 hover:text-white transition-colors">
+            <Link href="/movies" className="text-gray-300 hover:text-white transition-colors" title="Search Movies">
               <Search className="w-5 h-5" />
+            </Link>
+
+            <Link
+              href="/favorites"
+              className="hidden md:flex items-center gap-1.5 text-sm font-medium text-gray-300 hover:text-white transition-colors relative"
+              title="Saved Movies"
+            >
+              <Heart className={`w-4 h-4 ${favoriteIds.length > 0 ? 'text-rose-500 fill-rose-500' : ''}`} />
             </Link>
 
             <Link
@@ -148,9 +167,14 @@ export function Navbar() {
                 key={link.name}
                 href={link.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-base font-semibold text-gray-200 hover:text-primary transition-colors py-1"
+                className="text-base font-semibold text-gray-200 hover:text-primary transition-colors py-1 flex items-center justify-between"
               >
-                {link.name}
+                <span>{link.name}</span>
+                {link.name === 'Favorites' && favoriteIds.length > 0 && (
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-rose-600 text-white">
+                    {favoriteIds.length}
+                  </span>
+                )}
               </Link>
             ))}
             <div className="h-px bg-white/10 my-1" />
