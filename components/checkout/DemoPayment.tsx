@@ -26,7 +26,7 @@ export function DemoPayment({ amount, onSuccess }: DemoPaymentProps) {
     }, 2000);
   };
 
-  const upiUri = `upi://pay?pa=ticketx@upi&pn=TicketX%20Cinemas&am=${amount}&cu=INR`;
+  const upiUri = `upi://pay?pa=7075920852@fam&pn=TicketX%20Cinemas&am=${amount}&cu=INR`;
 
   return (
     <div className="bg-secondary/40 border border-white/10 rounded-xl p-6 md:p-8">
@@ -69,7 +69,7 @@ export function DemoPayment({ amount, onSuccess }: DemoPaymentProps) {
       <form onSubmit={handlePayment} className="space-y-6">
         {method === 'upi' && (
           <div className="space-y-6">
-            {/* Visible Scan & Pay UPI QR Code (Requirement 5) */}
+            {/* Visible Scan & Pay UPI QR Code */}
             <div className="bg-black/60 border border-white/10 p-6 rounded-2xl flex flex-col items-center justify-center text-center space-y-4 shadow-xl">
               <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider">
                 <QrCode className="w-4 h-4" /> Scan &amp; Pay with Any UPI App
@@ -81,7 +81,7 @@ export function DemoPayment({ amount, onSuccess }: DemoPaymentProps) {
 
               <div className="space-y-1">
                 <p className="text-xs font-mono text-gray-300">
-                  UPI ID: <strong className="text-white font-bold">ticketx@upi</strong>
+                  UPI ID: <strong className="text-white font-bold">7075920852@fam</strong>
                 </p>
                 <p className="text-xs font-mono text-emerald-400 font-bold">
                   Payable Amount: ₹{amount.toLocaleString()}
