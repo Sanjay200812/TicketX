@@ -137,8 +137,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const sendPhoneOtp = (phone: string) => {
     const cleanPhone = phone.replace(/\D/g, '');
-    if (cleanPhone.length < 10) {
-      return { success: false, error: 'Please enter a valid 10-digit Indian phone number.' };
+    if (!/^[789]\d{9}$/.test(cleanPhone)) {
+      return { success: false, error: 'Enter a valid number' };
     }
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();

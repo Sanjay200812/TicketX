@@ -68,23 +68,23 @@ function LoginContent() {
     }, 6000);
   };
 
+  const phoneRegex = /^[789]\d{9}$/;
+
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
-    // Requirement 6: Sanitize input - remove spaces, +, -, letters, keep digits only & slice to 10 max
     const sanitized = raw.replace(/\D/g, '').slice(0, 10);
     setPhone(sanitized);
 
-    // Requirement 4, 7, 9: Instant First-Digit & Length Validation
-    if (sanitized.length > 0 && !/^[789]/.test(sanitized)) {
-      setError('Enter a valid Indian mobile number starting with 7, 8 or 9.');
-    } else if (sanitized.length > 0 && sanitized.length < 10) {
-      setError('Enter a 10-digit mobile number.');
-    } else {
-      setError(null);
+    // Clear old error while user edits
+    setError(null);
+
+    // Validate only after all 10 digits are entered
+    if (sanitized.length === 10 && !phoneRegex.test(sanitized)) {
+      setError('Enter a valid number');
     }
   };
 
-  const isPhoneValid = /^[789]\d{9}$/.test(phone);
+  const isPhoneValid = phoneRegex.test(phone);
 
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,12 +118,8 @@ function LoginContent() {
     setError(null);
 
     const cleanPhone = phone.replace(/\D/g, '').slice(0, 10);
-    if (!/^[789]\d{9}$/.test(cleanPhone)) {
-      if (cleanPhone.length > 0 && !/^[789]/.test(cleanPhone)) {
-        setError('Mobile number must start with 7, 8 or 9.');
-      } else {
-        setError('Enter a 10-digit mobile number.');
-      }
+    if (!phoneRegex.test(cleanPhone)) {
+      setError('Enter a valid number');
       return;
     }
 
@@ -134,13 +130,12 @@ function LoginContent() {
       setLoading(false);
 
       if (!res.success) {
-        setError(res.error || 'Failed to send OTP');
+        setError(res.error || 'Enter a valid number');
         return;
       }
 
       setStep('otp');
       setResendTimer(30);
-      // Requirement 12: Toast shows ONLY "Verification code sent"
       triggerToast('Verification code sent');
     }, 400);
   };
