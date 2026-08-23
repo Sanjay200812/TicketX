@@ -1,26 +1,36 @@
-export type SeatStatus = 'available' | 'booked' | 'selected' | 'blocked';
-export type SeatCategoryKey = 'premium' | 'gold' | 'onLand' | 'silver';
+import { SeatStatus } from './seat';
+export type { SeatStatus };
 
-export interface TicketXSeatItem {
-  number: number;
+export interface TicketXSeat {
+  id: string;
+  label: string;
+  row: string;
+  number?: number;
   status: SeatStatus;
-  aisleAfter?: boolean;
+  sectionId: string;
+}
+
+export interface TicketXSeatGroup {
+  seats: TicketXSeat[];
 }
 
 export interface TicketXSeatRow {
   row: string;
-  leftSeats?: TicketXSeatItem[];
-  centerSeats?: TicketXSeatItem[];
-  rightSeats?: TicketXSeatItem[];
-  seats?: TicketXSeatItem[];
+  groups: TicketXSeatGroup[];
+  // Backwards compatibility helpers
+  leftSeats?: { number: number; status: SeatStatus }[];
+  centerSeats?: { number: number; status: SeatStatus }[];
+  rightSeats?: { number: number; status: SeatStatus }[];
+  seats?: { number: number; status: SeatStatus }[];
 }
 
 export interface TicketXSeatSection {
   id: string;
-  categoryKey: SeatCategoryKey;
-  name: string; // e.g. "Silver Class", "Gold Class", "On Land Luxury Recliner"
-  price: number;
+  name: string;
+  price: number | null;
+  priceStatus?: 'unknown' | 'confirmed';
   description?: string;
+  categoryKey?: string;
   rows: TicketXSeatRow[];
 }
 
@@ -28,11 +38,13 @@ export type SeatSection = TicketXSeatSection;
 
 export interface TicketXSeatLayout {
   id: string;
-  locationId: string;
   theatreId: string;
-  theatreName: string;
-  verifiedCapacity: number;
-  layoutFamily: 'Group A' | 'Group B';
+  screenId?: string;
+  locationId?: string;
+  theatreName?: string;
   screenPosition: 'bottom';
   sections: TicketXSeatSection[];
+  capacity: number;
+  verifiedCapacity?: number;
+  layoutFamily?: string;
 }

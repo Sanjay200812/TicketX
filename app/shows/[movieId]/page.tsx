@@ -162,7 +162,8 @@ export default function ShowsPage({ params }: { params: { movieId: string } }) {
             duration: movie.duration || '2h',
             releaseDate: movie.releaseDate || '2026-08-22',
             description: movie.description || '',
-            cast: [],
+            cast: movie.cast || [],
+            crew: movie.crew || [],
             format: ['2D'],
             status: 'now-showing'
           }}

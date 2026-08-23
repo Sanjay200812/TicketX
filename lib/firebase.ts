@@ -5,6 +5,8 @@ import {
   GoogleAuthProvider,
   setPersistence,
 } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyBw83cDBXdimfkEv0OkwiSYPIvLaVqdY3I',
@@ -22,10 +24,10 @@ export const firebaseApp =
     : getApp();
 
 export const auth = getAuth(firebaseApp);
+export const db = getFirestore(firebaseApp);
+export const storage = getStorage(firebaseApp);
 
 export const googleProvider = new GoogleAuthProvider();
-
-// Requirement 19: Force Google account chooser so user selects real Google account
 googleProvider.setCustomParameters({
   prompt: 'select_account',
 });

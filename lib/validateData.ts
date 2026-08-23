@@ -71,7 +71,7 @@ export function validateTicketXData(): { valid: boolean; errors: string[] } {
     if (!theatreIds.has(sl.theatreId)) {
       errors.push(`SeatLayout ${sl.id} references invalid theatreId: ${sl.theatreId}`);
     }
-    if (!locationIds.has(sl.locationId)) {
+    if (sl.locationId && !locationIds.has(sl.locationId)) {
       errors.push(`SeatLayout ${sl.id} references invalid locationId: ${sl.locationId}`);
     }
 

@@ -12,7 +12,7 @@ interface SeatItemProps {
 }
 
 export function SeatItem({ seat, isSelected, onSelect }: SeatItemProps) {
-  const isBooked = seat.status === 'booked';
+  const isBooked = seat.status === 'booked' || seat.status === 'disabled';
   const isBlocked = seat.status === 'blocked';
 
   if (isBlocked) {

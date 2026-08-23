@@ -2,14 +2,14 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
-import { MapPin, Clock, Calendar, ChevronLeft, Star } from 'lucide-react';
+import { MapPin, Clock, Calendar, ChevronLeft, Star, Users, Award } from 'lucide-react';
 import { movies } from '@/data/movies';
 import { useLocation } from '@/context/LocationContext';
 import { getTheatresForMovie } from '@/lib/data';
 import { MoviePoster } from '@/components/shared/MoviePoster';
 
 export default function MovieDetailsPage({ params }: { params: { id: string } }) {
-  const { selectedLocation } = useLocation();
+  const { location, selectedLocation } = useLocation();
 
   const movie = useMemo(() => {
     return movies.find((m) => m.id === params.id) || null;
@@ -17,8 +17,8 @@ export default function MovieDetailsPage({ params }: { params: { id: string } })
 
   const carryingTheatres = useMemo(() => {
     if (!movie) return [];
-    return getTheatresForMovie(movie.id, selectedLocation.id);
-  }, [movie, selectedLocation.id]);
+    return getTheatresForMovie(movie.id, location.city.id);
+  }, [movie, location.city.id]);
 
   if (!movie) {
     return (
@@ -39,9 +39,8 @@ export default function MovieDetailsPage({ params }: { params: { id: string } })
           <ChevronLeft className="w-4 h-4" /> Back to Movies
         </Link>
 
-        {/* Hero Section with Rich Movie Backdrop & Poster Image */}
+        {/* Hero Section with Movie Backdrop & Poster Image */}
         <div className="relative w-full min-h-[380px] rounded-2xl overflow-hidden mb-10 border border-white/10 shadow-2xl bg-black">
-          {/* Backdrop Image Blur Overlay */}
           {movie.poster && (
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
               <img
@@ -56,7 +55,6 @@ export default function MovieDetailsPage({ params }: { params: { id: string } })
 
           <div className="relative z-10 p-6 md:p-10 flex flex-col md:flex-row gap-8 items-start md:items-end h-full justify-between">
             <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
-              {/* Exact Matching Movie Poster Image */}
               <MoviePoster
                 src={movie.poster}
                 title={movie.title}
@@ -108,13 +106,67 @@ export default function MovieDetailsPage({ params }: { params: { id: string } })
           </div>
         </div>
 
-        {/* Synopsis & Details */}
+        {/* Synopsis, Cast, Crew & Showtimes */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-          <div className="lg:col-span-2 space-y-8">
+          <div className="lg:col-span-2 space-y-10">
+            {/* Synopsis */}
             <div>
-              <h3 className="text-2xl font-bold font-heading mb-4">Synopsis</h3>
+              <h3 className="text-2xl font-bold font-heading mb-4 text-white">Synopsis</h3>
               <p className="text-gray-300 leading-relaxed text-base">{movie.description}</p>
             </div>
+
+            {/* CAST SECTION (Requirements 10, 11) */}
+            {movie.cast && movie.cast.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-2xl font-bold font-heading flex items-center gap-2 text-white">
+                  <Users className="w-6 h-6 text-primary" /> Cast
+                </h3>
+                <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
+                  {movie.cast.map((actor) => (
+                    <div
+                      key={actor.id}
+                      className="w-36 shrink-0 bg-secondary/30 border border-white/10 rounded-2xl p-3 flex flex-col items-center text-center shadow-lg hover:border-primary/40 transition-colors"
+                    >
+                      <div className="w-20 h-20 rounded-full overflow-hidden mb-3 border-2 border-white/10 bg-black/50">
+                        {actor.image ? (
+                          <img src={actor.image} alt={actor.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center font-bold text-gray-400">
+                            {actor.name.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+                      <h4 className="font-bold text-sm text-white line-clamp-1">{actor.name}</h4>
+                      {actor.character && (
+                        <p className="text-xs text-muted-foreground line-clamp-1">{actor.character}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* CREW SECTION (Requirements 10, 12) */}
+            {movie.crew && movie.crew.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-2xl font-bold font-heading flex items-center gap-2 text-white">
+                  <Award className="w-6 h-6 text-amber-400" /> Crew
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {movie.crew.map((member) => (
+                    <div
+                      key={member.id}
+                      className="bg-secondary/30 border border-white/10 rounded-xl p-4 flex flex-col justify-between shadow-md"
+                    >
+                      <span className="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider mb-1">
+                        {member.role}
+                      </span>
+                      <span className="font-bold text-sm text-white">{member.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Theatres Showing This Movie */}

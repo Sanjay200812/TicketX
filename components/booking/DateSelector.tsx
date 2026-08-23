@@ -9,8 +9,12 @@ interface DateSelectorProps {
 }
 
 export function DateSelector({ dates, selectedDate, onSelect }: DateSelectorProps) {
+  const parseSafeDate = (dateStr: string) => {
+    return new Date(dateStr.includes('T') ? dateStr : `${dateStr}T12:00:00`);
+  };
+
   const formatDateLabel = (dateStr: string) => {
-    const date = new Date(dateStr);
+    const date = parseSafeDate(dateStr);
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -22,7 +26,7 @@ export function DateSelector({ dates, selectedDate, onSelect }: DateSelectorProp
   };
 
   const getDayName = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short' });
+    return parseSafeDate(dateStr).toLocaleDateString('en-US', { weekday: 'short' });
   };
 
   return (

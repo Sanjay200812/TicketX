@@ -58,7 +58,7 @@ export default function BookingPage({ params }: { params: { showId: string } }) 
         const customLayout = {
           ...l,
           sections: l.sections.map((sec) => {
-            const cat = sec.categoryKey.toLowerCase();
+            const cat = (sec.categoryKey || sec.name || '').toLowerCase();
             let newPrice = sec.price;
             if (cat.includes('premium') || cat.includes('silver')) {
               newPrice = s.priceOverrides?.premium ?? sec.price;

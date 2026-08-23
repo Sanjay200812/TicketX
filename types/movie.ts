@@ -1,3 +1,24 @@
+export interface TicketXCastMember {
+  id: string;
+  name: string;
+  character?: string;
+  image?: string;
+}
+
+export interface TicketXCrewMember {
+  id: string;
+  name: string;
+  role:
+    | 'Director'
+    | 'Producer'
+    | 'Writer'
+    | 'Music'
+    | 'Cinematography'
+    | 'Editor'
+    | string;
+  image?: string;
+}
+
 export interface TicketXMovie {
   id: string;
   title: string;
@@ -13,7 +34,9 @@ export interface TicketXMovie {
   releaseDate?: string;
   description?: string;
 
-  cast?: (string | { name: string; role?: string })[];
+  cast?: TicketXCastMember[];
+  crew?: TicketXCrewMember[];
+
   status?: string;
   format?: string[];
   cinemaCount?: number;

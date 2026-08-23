@@ -10,7 +10,7 @@ import { getLocationById } from '@/lib/data';
 import { Input } from '@/components/ui/input';
 
 export default function EventsPage() {
-  const { selectedLocation, selectLocation } = useLocation();
+  const { location, selectedLocation, selectLocation } = useLocation();
   const [selectedFilterCity, setSelectedFilterCity] = useState<string>('current'); // 'current' or specific cityId
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -19,7 +19,7 @@ export default function EventsPage() {
       let matchesCity = true;
       if (selectedFilterCity === 'current') {
         // If current city selected
-        matchesCity = e.cityId === selectedLocation.id;
+        matchesCity = e.cityId === (selectedLocation?.id || location.city.id);
       } else if (selectedFilterCity !== 'all') {
         matchesCity = e.cityId === selectedFilterCity;
       }
@@ -31,7 +31,7 @@ export default function EventsPage() {
 
       return matchesCity && matchesSearch;
     });
-  }, [selectedFilterCity, selectedLocation.id, searchQuery]);
+  }, [selectedFilterCity, location.city.id, selectedLocation?.id, searchQuery]);
 
   return (
     <div className="pt-24 pb-20 min-h-screen bg-background">
@@ -39,7 +39,7 @@ export default function EventsPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl md:text-5xl font-bold font-heading">
-              Events in {selectedLocation.name}
+              Events in {location.city.name}
             </h1>
             <p className="text-muted-foreground text-sm mt-1 flex items-center gap-1.5">
               <Sparkles className="w-4 h-4 text-primary" />
@@ -59,7 +59,7 @@ export default function EventsPage() {
                   : 'bg-secondary/60 text-gray-400 hover:text-white border-white/10'
               }`}
             >
-              Current City ({selectedLocation.name})
+              Current City ({location.city.name})
             </button>
 
             <button
@@ -135,7 +135,7 @@ export default function EventsPage() {
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 border border-primary/20">
               <Calendar className="w-8 h-8 text-primary" />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">No events available in {selectedLocation.name} right now</h3>
+            <h3 className="text-xl font-bold text-white mb-2">No events available in {location.city.name} right now</h3>
             <p className="text-muted-foreground text-sm leading-relaxed mb-6">
               Check out active events in nearby locations such as Narasaraopet or Hyderabad!
             </p>

@@ -2,13 +2,12 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { TicketXSeatLayout, SeatSection } from '@/types/seatLayouts';
+import { TicketXSeatLayout, TicketXSeatSection } from '@/types/seatLayouts';
 import { Seat, SeatStatus } from '@/types/seat';
 import { SeatItem } from './SeatItem';
 import { SeatLegend } from './SeatLegend';
 import { CinemaScreen } from './CinemaScreen';
 import { TemporaryMinimap } from './TemporaryMinimap';
-import { calculateUsableCapacity } from '@/lib/validateData';
 import { useAuth } from '@/context/AuthContext';
 import { DoorOpen } from 'lucide-react';
 
@@ -22,47 +21,13 @@ interface TheatreSeatMapProps {
 
 export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, onRestoreUserHold }: TheatreSeatMapProps) {
   const { user } = useAuth();
-  const totalCapacity = layout.verifiedCapacity || calculateUsableCapacity(layout);
   const [realtimeBooked, setRealtimeBooked] = useState<Set<string>>(new Set());
   const [realtimeHeld, setRealtimeHeld] = useState<Set<string>>(new Set());
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Requirements 1, 2, 3, 4, 5: Category Standardization Rule
-  // NRT Theatres: GOLD ₹295 | SILVER ₹150 | ON LAND LUXURY ₹1,116
-  // Non-NRT Theatres: GOLD ₹295 | SILVER ₹150 (ONLY 2 SECTIONS)
-  const isNRT = layout.locationId === 'nrt';
-
-  const rawSections: SeatSection[] = layout.sections.map((sec) => {
-    const key = sec.categoryKey;
-    const catLower = (sec.name || '').toLowerCase();
-
-    if (isNRT) {
-      if (catLower.includes('luxury') || catLower.includes('land') || key === 'onLand') {
-        return { ...sec, name: 'On Land Luxury Recliner', price: 1116, categoryKey: 'onLand' };
-      }
-      if (catLower.includes('gold') || key === 'gold') {
-        return { ...sec, name: 'Gold Class', price: 295, categoryKey: 'gold' };
-      }
-      return { ...sec, name: 'Silver Class', price: 150, categoryKey: 'silver' };
-    } else {
-      if (catLower.includes('gold') || key === 'gold' || catLower.includes('luxury') || catLower.includes('land') || key === 'onLand') {
-        return { ...sec, name: 'Gold Class', price: 295, categoryKey: 'gold' };
-      }
-      return { ...sec, name: 'Silver Class', price: 150, categoryKey: 'silver' };
-    }
-  });
-
-  const normalizedSections: SeatSection[] = [...rawSections].sort((a, b) => {
-    const orderScore = (s: SeatSection) => {
-      const name = s.name.toLowerCase();
-      if (name.includes('gold')) return 1;
-      if (name.includes('silver')) return 2;
-      if (name.includes('land') || name.includes('luxury')) return 3;
-      return 4;
-    };
-    return orderScore(a) - orderScore(b);
-  });
+  // Preserve actual seating-class names and prices supplied in layout definition (Requirements 1, 2, 3)
+  const sections: TicketXSeatSection[] = layout.sections;
 
   // Real-time polling sync for seat availability
   useEffect(() => {
@@ -70,7 +35,8 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
 
     const fetchSeatStatus = async () => {
       try {
-        const userIdParam = user?.id ? `&userId=${encodeURIComponent(user.id)}` : '';
+        const uid = user?.uid || user?.id;
+        const userIdParam = uid ? `&userId=${encodeURIComponent(uid)}` : '';
         const res = await fetch(`/api/seats/status?showId=${encodeURIComponent(showId)}${userIdParam}`);
         if (res.ok) {
           const data = await res.json();
@@ -96,17 +62,14 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
       clearInterval(interval);
       window.removeEventListener('focus', onFocus);
     };
-  }, [showId, user?.id, onRestoreUserHold]);
-
-  const totalOccupied = realtimeBooked.size + realtimeHeld.size;
-  const availableCount = Math.max(0, totalCapacity - totalOccupied - selectedSeats.length);
+  }, [showId, user?.uid, user?.id, onRestoreUserHold]);
 
   return (
     <div className="w-full max-w-5xl mx-auto flex flex-col items-center select-none relative">
-      {/* Floating Temporary Navigation Minimap (Reference 1 Real Seat Dots Style) */}
+      {/* Floating Navigation Minimap */}
       <TemporaryMinimap
         containerRef={scrollContainerRef}
-        sections={normalizedSections}
+        sections={sections}
         realtimeBooked={realtimeBooked}
         realtimeHeld={realtimeHeld}
         selectedSeats={selectedSeats}
@@ -114,31 +77,26 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
 
       {/* Layout Header Info & Capacity Display */}
       <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-3 mb-6 pb-4 border-b border-white/10 text-xs">
-        <div className="flex items-center gap-3">
-          <span className="font-bold text-white text-lg md:text-xl font-heading">{layout.theatreName}</span>
-          <span className="px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 font-bold text-[11px]">
-            {isNRT ? 'Gold ₹295 • Silver ₹150 • Luxury ₹1,116' : 'Gold ₹295 • Silver ₹150'}
-          </span>
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="font-bold text-white text-lg md:text-xl font-heading">{layout.theatreName || 'Cinema Hall'}</span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {sections.map((sec) => (
+              <span
+                key={sec.id}
+                className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-bold text-[11px]"
+              >
+                {sec.name} {sec.price !== null ? `₹${sec.price}` : 'Price TBA'}
+              </span>
+            ))}
+          </div>
         </div>
 
-        {/* Real-time Capacity Counter */}
-        <div className="flex items-center gap-4 bg-secondary/40 px-4 py-2 rounded-xl border border-white/10 text-xs font-mono">
-          <div>
-            <span className="text-muted-foreground">Capacity: </span>
-            <span className="text-white font-bold">{totalCapacity}</span>
-          </div>
-          <div className="w-px h-3 bg-white/20" />
-          <div>
-            <span className="text-muted-foreground">Available: </span>
-            <span className="text-emerald-400 font-bold">{availableCount}</span>
-          </div>
-        </div>
       </div>
 
       {/* Legend */}
-      <SeatLegend sections={normalizedSections} />
+      <SeatLegend sections={sections} />
 
-      {/* AUDITORIUM THEATRE ENTRANCE CORRIDOR */}
+      {/* AUDITORIUM ENTRANCE CORRIDOR */}
       <div className="w-full max-w-4xl flex items-center justify-start mb-4 px-2">
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/30 text-xs font-bold font-mono shadow-md">
           <DoorOpen className="w-4 h-4 text-amber-400" />
@@ -151,9 +109,8 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
         ref={scrollContainerRef}
         className="w-full space-y-10 overflow-x-auto hide-scrollbar py-4 border border-white/5 rounded-2xl p-4 bg-black/40"
       >
-        {normalizedSections.map((section, secIdx) => {
-          const isLuxury = section.name.toLowerCase().includes('luxury') || section.name.toLowerCase().includes('land');
-          const isGold = section.name.toLowerCase().includes('gold');
+        {sections.map((section, secIdx) => {
+          const secPrice = section.price !== null ? `₹${section.price}` : 'Price TBA';
 
           return (
             <motion.div
@@ -167,18 +124,10 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
               <div className="w-full flex items-center gap-4">
                 <div className="h-px flex-1 bg-white/10" />
                 <div className="flex flex-col items-center">
-                  <span
-                    className={`text-xs font-black uppercase tracking-widest px-5 py-1 rounded-full border flex items-center gap-2 shadow-lg ${
-                      isLuxury
-                        ? 'bg-gradient-to-r from-rose-950/80 via-rose-900/40 to-rose-950/80 text-rose-300 border-rose-500/50'
-                        : isGold
-                        ? 'bg-amber-950/60 text-amber-300 border-amber-500/40'
-                        : 'bg-slate-900/80 text-slate-200 border-slate-400/40'
-                    }`}
-                  >
+                  <span className="text-xs font-black uppercase tracking-widest px-5 py-1 rounded-full border flex items-center gap-2 shadow-lg bg-secondary/80 text-white border-white/20">
                     <span>{section.name}</span>
                     <span className="font-mono font-black text-white bg-black/40 px-2 py-0.5 rounded-md border border-white/10">
-                      ₹{section.price}
+                      {secPrice}
                     </span>
                   </span>
                 </div>
@@ -194,110 +143,75 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
                       {rowGroup.row}
                     </div>
 
-                    {/* Left Block */}
-                    {rowGroup.leftSeats && rowGroup.leftSeats.length > 0 && (
-                      <div className="flex gap-1 sm:gap-1.5">
-                        {rowGroup.leftSeats.map((st) => {
-                          const seatCode = `${rowGroup.row}${st.number.toString().padStart(2, '0')}`;
-                          let currentStatus: SeatStatus = st.status;
-                          if (realtimeBooked.has(seatCode) || realtimeHeld.has(seatCode)) {
-                            currentStatus = 'booked';
-                          }
+                    {/* Seat Groups / Aisles */}
+                    {rowGroup.groups && rowGroup.groups.length > 0 ? (
+                      <div className="flex items-center gap-4">
+                        {rowGroup.groups.map((group, grpIdx) => (
+                          <div key={grpIdx} className="flex items-center gap-1 sm:gap-1.5">
+                            {group.seats.map((st) => {
+                              const seatCode = st.id || `${rowGroup.row}${(st.number || 0).toString().padStart(2, '0')}`;
+                              let currentStatus: SeatStatus = st.status;
+                              if (realtimeBooked.has(seatCode) || realtimeHeld.has(seatCode)) {
+                                currentStatus = 'booked';
+                              }
 
-                          const seatObj: Seat = {
-                            id: seatCode,
-                            row: rowGroup.row,
-                            number: st.number,
-                            category: section.name,
-                            price: section.price,
-                            status: currentStatus,
-                          };
+                              const seatObj: Seat = {
+                                id: seatCode,
+                                row: rowGroup.row,
+                                number: st.number || 0,
+                                category: section.name,
+                                price: section.price || 0,
+                                status: currentStatus,
+                              };
 
-                          return (
-                            <SeatItem
-                              key={seatObj.id}
-                              seat={seatObj}
-                              isSelected={selectedSeats.some((s) => s.id === seatObj.id)}
-                              onSelect={onSeatSelect}
-                            />
-                          );
-                        })}
+                              return (
+                                <SeatItem
+                                  key={seatObj.id}
+                                  seat={seatObj}
+                                  isSelected={selectedSeats.some((s) => s.id === seatObj.id)}
+                                  onSelect={onSeatSelect}
+                                />
+                              );
+                            })}
+                          </div>
+                        ))}
                       </div>
-                    )}
-
-                    {/* Aisle Corridor Break */}
-                    {rowGroup.leftSeats && rowGroup.centerSeats && (
-                      <div className="w-6 sm:w-10 text-[8px] text-center text-muted-foreground/30 font-mono select-none">
-                        AISLE
-                      </div>
-                    )}
-
-                    {/* Center Block */}
-                    {rowGroup.centerSeats && rowGroup.centerSeats.length > 0 && (
-                      <div className="flex gap-1 sm:gap-1.5">
-                        {rowGroup.centerSeats.map((st) => {
-                          const seatCode = `${rowGroup.row}${st.number.toString().padStart(2, '0')}`;
-                          let currentStatus: SeatStatus = st.status;
-                          if (realtimeBooked.has(seatCode) || realtimeHeld.has(seatCode)) {
-                            currentStatus = 'booked';
-                          }
-
-                          const seatObj: Seat = {
-                            id: seatCode,
-                            row: rowGroup.row,
-                            number: st.number,
-                            category: section.name,
-                            price: section.price,
-                            status: currentStatus,
-                          };
-
-                          return (
-                            <SeatItem
-                              key={seatObj.id}
-                              seat={seatObj}
-                              isSelected={selectedSeats.some((s) => s.id === seatObj.id)}
-                              onSelect={onSeatSelect}
-                            />
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Aisle Corridor Break */}
-                    {((rowGroup.centerSeats && rowGroup.rightSeats) || (rowGroup.leftSeats && rowGroup.rightSeats && !rowGroup.centerSeats)) && (
-                      <div className="w-6 sm:w-10 text-[8px] text-center text-muted-foreground/30 font-mono select-none">
-                        AISLE
-                      </div>
-                    )}
-
-                    {/* Right Block */}
-                    {rowGroup.rightSeats && rowGroup.rightSeats.length > 0 && (
-                      <div className="flex gap-1 sm:gap-1.5">
-                        {rowGroup.rightSeats.map((st) => {
-                          const seatCode = `${rowGroup.row}${st.number.toString().padStart(2, '0')}`;
-                          let currentStatus: SeatStatus = st.status;
-                          if (realtimeBooked.has(seatCode) || realtimeHeld.has(seatCode)) {
-                            currentStatus = 'booked';
-                          }
-
-                          const seatObj: Seat = {
-                            id: seatCode,
-                            row: rowGroup.row,
-                            number: st.number,
-                            category: section.name,
-                            price: section.price,
-                            status: currentStatus,
-                          };
-
-                          return (
-                            <SeatItem
-                              key={seatObj.id}
-                              seat={seatObj}
-                              isSelected={selectedSeats.some((s) => s.id === seatObj.id)}
-                              onSelect={onSeatSelect}
-                            />
-                          );
-                        })}
+                    ) : (
+                      /* Fallback legacy left/center/right seats */
+                      <div className="flex gap-2">
+                        {rowGroup.leftSeats && (
+                          <div className="flex gap-1">
+                            {rowGroup.leftSeats.map((st) => {
+                              const seatCode = `${rowGroup.row}${st.number.toString().padStart(2, '0')}`;
+                              let currentStatus: SeatStatus = st.status;
+                              if (realtimeBooked.has(seatCode) || realtimeHeld.has(seatCode)) currentStatus = 'booked';
+                              const seatObj: Seat = { id: seatCode, row: rowGroup.row, number: st.number, category: section.name, price: section.price || 0, status: currentStatus };
+                              return <SeatItem key={seatObj.id} seat={seatObj} isSelected={selectedSeats.some((s) => s.id === seatObj.id)} onSelect={onSeatSelect} />;
+                            })}
+                          </div>
+                        )}
+                        {rowGroup.centerSeats && (
+                          <div className="flex gap-1 ml-4">
+                            {rowGroup.centerSeats.map((st) => {
+                              const seatCode = `${rowGroup.row}${st.number.toString().padStart(2, '0')}`;
+                              let currentStatus: SeatStatus = st.status;
+                              if (realtimeBooked.has(seatCode) || realtimeHeld.has(seatCode)) currentStatus = 'booked';
+                              const seatObj: Seat = { id: seatCode, row: rowGroup.row, number: st.number, category: section.name, price: section.price || 0, status: currentStatus };
+                              return <SeatItem key={seatObj.id} seat={seatObj} isSelected={selectedSeats.some((s) => s.id === seatObj.id)} onSelect={onSeatSelect} />;
+                            })}
+                          </div>
+                        )}
+                        {rowGroup.rightSeats && (
+                          <div className="flex gap-1 ml-4">
+                            {rowGroup.rightSeats.map((st) => {
+                              const seatCode = `${rowGroup.row}${st.number.toString().padStart(2, '0')}`;
+                              let currentStatus: SeatStatus = st.status;
+                              if (realtimeBooked.has(seatCode) || realtimeHeld.has(seatCode)) currentStatus = 'booked';
+                              const seatObj: Seat = { id: seatCode, row: rowGroup.row, number: st.number, category: section.name, price: section.price || 0, status: currentStatus };
+                              return <SeatItem key={seatObj.id} seat={seatObj} isSelected={selectedSeats.some((s) => s.id === seatObj.id)} onSelect={onSeatSelect} />;
+                            })}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -313,7 +227,7 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
         })}
       </div>
 
-      {/* SCREEN AT THE ABSOLUTE BOTTOM */}
+      {/* SCREEN AT THE ABSOLUTE BOTTOM (Requirements 4) */}
       <CinemaScreen />
     </div>
   );

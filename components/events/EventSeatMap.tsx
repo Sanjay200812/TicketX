@@ -56,9 +56,6 @@ export function EventSeatMap({ layout, eventId, selectedSeats, onSeatSelect, onR
     };
   }, [eventId, user?.id, onRestoreUserHold]);
 
-  const totalOccupied = realtimeBooked.size + realtimeHeld.size;
-  const availableCount = Math.max(0, 1000 - totalOccupied - selectedSeats.length);
-
   return (
     <div className="w-full max-w-6xl mx-auto flex flex-col items-center select-none">
       {/* Layout Header Info & Capacity Counter */}
@@ -70,18 +67,6 @@ export function EventSeatMap({ layout, eventId, selectedSeats, onSeatSelect, onR
           </span>
         </div>
 
-        {/* Real-Time Capacity Counter */}
-        <div className="flex items-center gap-4 bg-secondary/40 px-4 py-2 rounded-xl border border-white/10 text-xs font-mono">
-          <div>
-            <span className="text-muted-foreground">Capacity: </span>
-            <span className="text-white font-bold">1,000 Seats</span>
-          </div>
-          <div className="w-px h-3 bg-white/20" />
-          <div>
-            <span className="text-muted-foreground">Available: </span>
-            <span className="text-emerald-400 font-bold">{availableCount}</span>
-          </div>
-        </div>
       </div>
 
       {/* EVENT SEAT MAP LEGEND */}

@@ -66,7 +66,10 @@ export function TicketCard({ ticket: rawTicket, booking, className = '' }: Ticke
   const categoryName = ticketData.category || 'GOLD';
 
   return (
-    <div className={`relative w-full max-w-sm mx-auto bg-[#121215] text-white rounded-3xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden font-sans ${className}`}>
+    <div
+      id="ticket-card-pass"
+      className={`relative w-full max-w-sm mx-auto bg-[#121215] text-white rounded-3xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden font-sans ${className}`}
+    >
       {/* Ticket Side Notches */}
       <div className="absolute top-[280px] -left-4 w-8 h-8 rounded-full bg-background border border-white/10 z-20" />
       <div className="absolute top-[280px] -right-4 w-8 h-8 rounded-full bg-background border border-white/10 z-20" />
@@ -76,9 +79,14 @@ export function TicketCard({ ticket: rawTicket, booking, className = '' }: Ticke
         <span className="text-xl font-black font-heading tracking-widest text-white">
           TICKET<span className="text-primary">X</span>
         </span>
-        <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded bg-primary/20 text-primary border border-primary/30 font-mono">
-          DIGITAL PASS
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">
+            RAZORPAY TEST MODE
+          </span>
+          <span className="text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-primary/20 text-primary border border-primary/30 font-mono">
+            DIGITAL PASS
+          </span>
+        </div>
       </div>
 
       {/* Movie & Showtime Header */}

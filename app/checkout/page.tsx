@@ -4,17 +4,17 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { BookingSummary } from '@/components/checkout/BookingSummary';
-import { DemoPayment } from '@/components/checkout/DemoPayment';
+import { RazorpayPayment } from '@/components/checkout/RazorpayPayment';
 import { BookingProgress } from '@/components/booking/BookingProgress';
-import { calculateTotal } from '@/lib/pricing';
-import { saveBooking } from '@/lib/storage';
+import { saveBookingForUser } from '@/lib/storage';
 import { Booking } from '@/types/booking';
 import { Movie } from '@/types/movie';
 import { Theatre } from '@/types/theatre';
 import { Show } from '@/types/show';
 import { Seat } from '@/types/seat';
 import { useAuth } from '@/context/AuthContext';
-import { Clock, ChevronLeft, AlertCircle } from 'lucide-react';
+import { Clock, ChevronLeft, AlertCircle, LogIn } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -30,7 +30,6 @@ export default function CheckoutPage() {
   } | null>(null);
 
   const [timeLeft, setTimeLeft] = useState<number>(600); // 10 minutes default
-  const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -48,7 +47,6 @@ export default function CheckoutPage() {
     }
   }, [router]);
 
-  // 10-Minute Active Countdown Timer (Requirement 10, 15)
   useEffect(() => {
     if (!checkoutData?.expiresAt) return;
 
@@ -65,20 +63,7 @@ export default function CheckoutPage() {
     return () => clearInterval(timer);
   }, [checkoutData?.expiresAt]);
 
-  // Handle user leaving checkout -> trigger 5-minute abandoned grace period (Requirement 12)
   const handleLeaveCheckout = () => {
-    if (checkoutData?.holdId && user?.id) {
-      fetch('/api/seats/release', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          holdId: checkoutData.holdId,
-          userId: user.id,
-          action: 'abandon',
-        }),
-      }).catch((e) => console.error(e));
-    }
-
     if (checkoutData?.isEvent) {
       router.push(`/events/${checkoutData.movie.id}`);
     } else if (checkoutData?.show?.id) {
@@ -96,8 +81,10 @@ export default function CheckoutPage() {
     );
   }
 
-  const { holdId, movie, theatre, show, selectedSeats } = checkoutData;
-  const total = calculateTotal(selectedSeats);
+  const { movie, theatre, show, selectedSeats } = checkoutData;
+
+  // Calculate Account Owner Key (Requirements 27, 42)
+  const ownerId = user?.uid || (user?.phone ? `phone:+91${user.phone}` : null);
 
   const formatCountdown = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -105,76 +92,24 @@ export default function CheckoutPage() {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const handlePaymentSuccess = async () => {
-    if (processing || timeLeft <= 0) return; // double-click and expiration protection
-    setProcessing(true);
-    setError(null);
-
-    const idempotencyKey = `req_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-    const userId = user?.id || `usr_guest_${Date.now()}`;
+  // Called ONLY after server-side Razorpay signature verification succeeds (Requirements 1, 26, 30)
+  const handlePaymentSuccess = async (confirmedBooking: Booking) => {
+    if (!ownerId) {
+      setError('Please sign in to save your ticket.');
+      return;
+    }
 
     try {
-      const res = await fetch('/api/bookings/confirm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          holdId,
-          showId: show.id,
-          seatCodes: selectedSeats.map((s) => s.id),
-          seatPrices: selectedSeats.map((s) => ({ code: s.id, price: s.price })),
-          userId,
-          userName: user?.name || 'Guest User',
-          userEmail: user?.email,
-          userPhone: user?.phone,
-          idempotencyKey,
-          movieId: movie.id,
-          movieTitle: movie.title,
-          moviePoster: movie.poster,
-          movieLanguage: movie.language,
-          theatreId: theatre.id,
-          theatreName: theatre.name,
-          locationId: show.locationId || theatre.locationId || 'guntur',
-          cityName: theatre.area || 'Guntur',
-          date: show.date,
-          time: show.time,
-          screenName: show.screenName || show.screen || 'Screen 1',
-        }),
-      });
+      // Account-scoped booking persistence (Requirements 27, 42)
+      await saveBookingForUser(ownerId, confirmedBooking);
 
-      const data = await res.json();
-      setProcessing(false);
-
-      if (!res.ok || !data.success) {
-        setError(data.error || 'Failed to complete booking confirmation');
-        return;
-      }
-
-      const confirmedBooking: Booking = {
-        id: data.booking.id,
-        movieId: movie.id,
-        movieTitle: movie.title,
-        theatre: theatre.name,
-        screen: show.screenName || show.screen || 'Screen 1',
-        date: show.date,
-        time: show.time,
-        seats: selectedSeats.map((s) => s.id),
-        ticketCount: selectedSeats.length,
-        subtotal: data.booking.pricing.subtotal,
-        convenienceFee: data.booking.pricing.bookingFee,
-        total: data.booking.pricing.grandTotal,
-        status: 'upcoming',
-        bookingDate: new Date().toISOString(),
-      };
-
-      saveBooking(confirmedBooking);
       sessionStorage.removeItem('ticketx_checkout');
-      sessionStorage.setItem('ticketx_success', data.booking.id);
+      sessionStorage.setItem('ticketx_success', confirmedBooking.id);
 
-      router.push(`/booking-success?id=${encodeURIComponent(data.booking.id)}`);
+      router.push(`/booking-success?id=${encodeURIComponent(confirmedBooking.id)}`);
     } catch (err) {
-      console.error('Error confirming payment:', err);
-      setProcessing(false);
-      setError('An error occurred during booking completion. Please try again.');
+      console.error('Error saving verified booking:', err);
+      setError('Failed to store verified booking. Please check My Bookings.');
     }
   };
 
@@ -190,8 +125,7 @@ export default function CheckoutPage() {
 
         <div className="max-w-5xl mx-auto mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold font-heading">Review & Pay</h1>
-            {/* 10-MINUTE ACTIVE COUNTDOWN TIMER DISPLAY */}
+            <h1 className="text-3xl md:text-4xl font-bold font-heading">Review &amp; Pay</h1>
             <div className="flex items-center gap-2 mt-2">
               <span className="text-xs text-muted-foreground font-medium">Seats reserved for:</span>
               <span className={`px-3 py-1 rounded-full border text-xs font-mono font-bold flex items-center gap-1.5 ${
@@ -208,7 +142,23 @@ export default function CheckoutPage() {
           <BookingProgress currentStep="checkout" />
         </div>
 
-        {timeLeft <= 0 ? (
+        {/* Require Sign In if Guest (Requirement 27, 28) */}
+        {!ownerId ? (
+          <div className="max-w-xl mx-auto py-12 text-center bg-secondary/30 rounded-3xl border border-white/10 p-8 shadow-2xl space-y-4">
+            <LogIn className="w-12 h-12 text-primary mx-auto" />
+            <h2 className="text-2xl font-bold text-white font-heading">Sign In to Complete Booking</h2>
+            <p className="text-muted-foreground text-xs leading-relaxed max-w-md mx-auto">
+              You must be signed in to issue your Digital Ticket Pass under your account. Your selected seats will be preserved.
+            </p>
+            <Button
+              size="lg"
+              onClick={() => router.push('/login?redirect=/checkout')}
+              className="rounded-full px-8 font-bold text-sm"
+            >
+              Sign In / Register Now →
+            </Button>
+          </div>
+        ) : timeLeft <= 0 ? (
           <div className="max-w-2xl mx-auto py-16 text-center bg-secondary/30 rounded-2xl border border-destructive/30 p-8 shadow-2xl">
             <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-white mb-2">Seat Hold Expired</h2>
@@ -251,7 +201,14 @@ export default function CheckoutPage() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
               >
-                <DemoPayment amount={total} onSuccess={handlePaymentSuccess} />
+                {/* Razorpay Test Mode Payment Standard Checkout (Requirement 1, 16, 50) */}
+                <RazorpayPayment
+                  movie={movie}
+                  theatre={theatre}
+                  show={show}
+                  selectedSeats={selectedSeats}
+                  onSuccess={handlePaymentSuccess}
+                />
               </motion.div>
             </div>
           </>

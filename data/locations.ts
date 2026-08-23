@@ -109,3 +109,5 @@ export const locations: TicketXLocation[] = [
   { id: "goa", name: "Panaji / Goa", state: "Goa", country: "India", bookingEnabled: false },
   { id: "chandigarh", name: "Chandigarh", state: "Chandigarh", country: "India", bookingEnabled: false }
 ];
+
+export const LOCATIONS = locations;

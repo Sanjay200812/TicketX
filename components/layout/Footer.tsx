@@ -8,7 +8,7 @@ export function Footer() {
           <div className="col-span-1 md:col-span-1">
             <Link href="/" className="inline-block mb-4">
               <span className="text-2xl font-bold tracking-tighter text-white font-heading">
-                TICKET<span className="text-primary">X</span>
+                Ticket<span className="text-primary">X</span>
               </span>
             </Link>
             <p className="text-muted-foreground text-xs max-w-xs leading-relaxed">

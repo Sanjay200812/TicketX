@@ -6,18 +6,17 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Download, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getBookings } from '@/lib/storage';
+import { getUserBookingsLocal } from '@/lib/storage';
 import { Booking } from '@/types/booking';
 import { TicketCard } from '@/components/ticket/TicketCard';
-import { downloadTicketPdf } from '@/lib/pdfGenerator';
-import { shareTicket } from '@/lib/ticketShare';
+import { downloadTicketJpg, shareTicketJpg } from '@/lib/ticketExport';
 import { useAuth } from '@/context/AuthContext';
 
 export default function BookingSuccessPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [booking, setBooking] = useState<Booking | null>(null);
-  const [shareSuccessToast, setShareSuccessToast] = useState<string | null>(null);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   useEffect(() => {
     const successId = sessionStorage.getItem('ticketx_success');
@@ -26,28 +25,51 @@ export default function BookingSuccessPage() {
       return;
     }
 
-    const bookings = getBookings();
+    // Account-isolated booking retrieval (Requirements 23, 24, 26, 30)
+    const bookings = user?.uid ? getUserBookingsLocal(user.uid) : [];
     const found = bookings.find((b) => b.id === successId);
 
     if (found) {
       setBooking(found);
     } else {
-      router.push('/');
+      // Fallback: If not found in local user cache, try any recent booking stored in session
+      const rawStored = sessionStorage.getItem(`ticketx_booking_${successId}`);
+      if (rawStored) {
+        try {
+          setBooking(JSON.parse(rawStored));
+          return;
+        } catch (e) {
+          console.error(e);
+        }
+      }
     }
-  }, [router]);
+  }, [router, user?.uid]);
 
+  const triggerToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 3500);
+  };
+
+  // Requirement: Digital Ticket JPEG Pass export (TicketX_<BookingID>.jpg)
   const handleDownload = async () => {
     if (!booking) return;
     const customerName = user?.name || user?.email || user?.displayPhone || 'TicketX Customer';
-    await downloadTicketPdf(booking, customerName);
+    await downloadTicketJpg(booking, customerName);
   };
 
+  // Requirement: Native Web Share API with JPG pass fallback
   const handleShare = async () => {
     if (!booking) return;
-    const res = await shareTicket(booking);
-    if (res.success && res.method === 'clipboard') {
-      setShareSuccessToast('Booking details copied to clipboard!');
-      setTimeout(() => setShareSuccessToast(null), 3500);
+    const customerName = user?.name || user?.email || user?.displayPhone || 'TicketX Customer';
+    const res = await shareTicketJpg(booking, customerName);
+    if (res.success) {
+      if (res.method === 'clipboard') {
+        triggerToast('Digital Ticket Pass copied to clipboard!');
+      } else if (res.method === 'download') {
+        triggerToast('Digital Ticket Pass downloaded!');
+      } else {
+        triggerToast('Ticket Pass shared successfully!');
+      }
     }
   };
 
@@ -65,10 +87,10 @@ export default function BookingSuccessPage() {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-lg h-[400px] bg-primary/20 blur-[120px] rounded-full pointer-events-none" />
 
       {/* Share Toast Notification */}
-      {shareSuccessToast && (
+      {toastMsg && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] bg-emerald-500/90 text-white font-bold text-xs px-6 py-2.5 rounded-full shadow-2xl backdrop-blur-md flex items-center gap-2 animate-bounce">
           <CheckCircle2 className="w-4 h-4" />
-          <span>{shareSuccessToast}</span>
+          <span>{toastMsg}</span>
         </div>
       )}
 
@@ -96,7 +118,7 @@ export default function BookingSuccessPage() {
         >
           <h1 className="text-3xl md:text-5xl font-bold font-heading mb-4">BOOKING CONFIRMED</h1>
           <p className="text-muted-foreground text-lg max-w-md mx-auto">
-            Your TicketX experience is ready. Get ready for an amazing time at the show.
+            Your TicketX digital pass is ready. Get ready for an amazing cinematic experience!
           </p>
         </motion.div>
 
@@ -120,7 +142,7 @@ export default function BookingSuccessPage() {
             onClick={handleDownload}
             className="rounded-full px-7 font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg flex items-center gap-2"
           >
-            <Download className="w-4 h-4" /> Download Ticket
+            <Download className="w-4 h-4" /> Download Ticket JPG
           </Button>
 
           <Button
@@ -129,7 +151,7 @@ export default function BookingSuccessPage() {
             onClick={handleShare}
             className="rounded-full px-7 font-bold border-white/20 text-white hover:bg-white/10 flex items-center gap-2"
           >
-            <Share2 className="w-4 h-4" /> Share Ticket
+            <Share2 className="w-4 h-4" /> Share Ticket Pass
           </Button>
 
           <Button size="lg" className="rounded-full px-7 font-bold" asChild>

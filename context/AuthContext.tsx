@@ -1,324 +1,759 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { loginWithGoogle as firebaseLoginWithGoogle, logoutFirebaseUser } from '@/lib/firebaseAuth';
+import {
+  onAuthStateChanged,
+  User as FirebaseUser,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  signOut,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
+} from 'firebase/auth';
+import { doc, getDoc, setDoc, onSnapshot, Unsubscribe, collection, query, where, getDocs } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { auth, db, storage } from '@/lib/firebase';
 
-export interface TicketXUser {
-  id: string;
-  name?: string;
-  email?: string;
-  phone?: string;
-  displayPhone?: string;
-  avatar?: string;
-  authMethod: 'email' | 'phone' | 'google';
+export interface TicketXUserProfile {
+  uid: string;
+  id?: string;
+  name: string;
+  email?: string | null;
+  emailVerified?: boolean;
+  phoneNumber?: string | null;
+  phone?: string | null;
+  phoneVerified?: boolean;
+  displayPhone?: string | null;
+  gender?: 'Male' | 'Female' | 'Other' | 'Prefer not to say' | string | null;
+  dob?: string | null;
+  photoURL?: string | null;
+  avatar?: string | null;
+  authMethods?: string[];
   role?: 'customer' | 'venue_owner' | 'admin';
-  createdAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-interface PendingOtp {
-  phone: string;
-  code: string;
-  expiresAt: number;
+// Requirement 19, 20: Single password rule — minimum 6 characters only
+export function validatePasswordRules(pass: string): { isValid: boolean } {
+  return {
+    isValid: pass.length >= 6,
+  };
 }
+
+// Indian 10-digit mobile number starting with 6, 7, 8, or 9 (Requirements 7, 8)
+export function validateIndianPhone(phone: string): boolean {
+  const sanitized = phone.replace(/\D/g, '');
+  return /^[6-9]\d{9}$/.test(sanitized);
+}
+
+// Requirement 1: Age Check with exact error string "Doesn't meet age requirements."
+export function validateMinimumAge16(dobStr: string): boolean {
+  if (!dobStr) return false;
+  const parts = dobStr.split('-');
+  if (parts.length !== 3) return false;
+
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return false;
+
+  const dob = new Date(year, month, day);
+  if (dob.getFullYear() !== year || dob.getMonth() !== month || dob.getDate() !== day) {
+    return false;
+  }
+
+  const today = new Date();
+  const maxAllowedDob = new Date(today.getFullYear() - 16, today.getMonth(), today.getDate());
+
+  return dob <= maxAllowedDob;
+}
+
+// Helper to strip undefined values before writing to Firestore
+export function removeUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, value]) => value !== undefined)
+  ) as Partial<T>;
+}
+
+export type TicketXSession =
+  | {
+      type: 'firebase';
+      uid: string;
+    }
+  | {
+      type: 'demo-phone';
+      phone: string;
+      accountKey: string;
+    }
+  | {
+      type: 'demo-email';
+      email: string;
+      accountKey: string;
+    }
+  | null;
 
 interface AuthContextType {
-  user: TicketXUser | null;
-  pendingOtp: PendingOtp | null;
+  user: TicketXUserProfile | null;
+  firebaseUser: FirebaseUser | null;
   loading: boolean;
-  sendPhoneOtp: (phone: string) => { success: boolean; error?: string };
-  verifyPhoneOtp: (otp: string) => { success: boolean; error?: string };
-  loginWithEmail: (email: string, pass: string) => { success: boolean; error?: string };
-  signupWithEmail: (name: string, email: string, pass: string) => { success: boolean; error?: string };
+  session: TicketXSession;
+
+  // Account Existence Lookup
+  checkAccountRegistered: (identifier: string, type: 'email' | 'phone') => Promise<boolean>;
+
+  // Requirements 13, 14, 16, 17, 27: Post-OTP Verification Account Resolver
+  resolvePostOtpAccount: (params: {
+    identifier: string;
+    type: 'phone' | 'email';
+    name?: string;
+  }) => Promise<{ success: boolean; isNewUser?: boolean; error?: string }>;
+
+  // Rate Limiting
+  passwordAttempts: number;
+  isPasswordLocked: boolean;
+  cooldownSeconds: number;
+  recordFailedPasswordAttempt: () => void;
+  resetPasswordAttempts: () => void;
+
+  // Email authentication
+  signupWithEmail: (data: {
+    name: string;
+    email: string;
+    pass: string;
+    phone: string;
+    gender?: string;
+    dob?: string;
+  }) => Promise<{ success: boolean; error?: string }>;
+
+  loginWithEmail: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
-  updateUsername: (newName: string) => { success: boolean; error?: string };
-  setRole: (role: 'customer' | 'venue_owner' | 'admin') => void;
+
+  sendVerificationEmail: () => Promise<{ success: boolean; error?: string }>;
+  checkEmailVerified: () => Promise<boolean>;
+  resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
+  sendForgotPasswordOtp: (email: string) => Promise<{ success: boolean; message?: string; demoOtp?: string; error?: string }>;
+  verifyForgotPasswordOtp: (email: string, otp: string, newPass: string) => Promise<{ success: boolean; error?: string }>;
+
+  // Profile operations & Security
+  updateProfileData: (data: Partial<TicketXUserProfile>) => Promise<{ success: boolean; error?: string }>;
+  uploadProfilePicture: (file: File) => Promise<{ success: boolean; url?: string; error?: string }>;
+  addPhoneToCurrentProfile: (phone: string) => Promise<{ success: boolean; error?: string }>;
+  reauthenticateAndChangePassword: (oldPass: string, newPass: string) => Promise<{ success: boolean; error?: string }>;
+
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const IS_DEV_MODE = process.env.NEXT_PUBLIC_DEV_AUTH_MODE !== 'false';
-const USERS_DB_KEY = 'ticketx_registered_users';
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<TicketXUser | null>(null);
-  const [pendingOtp, setPendingOtp] = useState<PendingOtp | null>(null);
+  const [user, setUser] = useState<TicketXUserProfile | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [demoSessionUser, setDemoSessionUser] = useState<{ identifier: string; accountKey: string; type: 'phone' | 'email' } | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Requirement 10: Observe Firebase Authentication state with onAuthStateChanged (Official Firebase recommendation)
+  // Rate limiting state
+  const [passwordAttempts, setPasswordAttempts] = useState<number>(0);
+  const [isPasswordLocked, setIsPasswordLocked] = useState<boolean>(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState<number>(0);
+
+  const currentSession: TicketXSession = firebaseUser
+    ? { type: 'firebase', uid: firebaseUser.uid }
+    : demoSessionUser?.type === 'phone'
+    ? { type: 'demo-phone', phone: demoSessionUser.identifier, accountKey: demoSessionUser.accountKey }
+    : demoSessionUser?.type === 'email'
+    ? { type: 'demo-email', email: demoSessionUser.identifier, accountKey: demoSessionUser.accountKey }
+    : null;
+
+  // Rate Limiter Cooldown Timer
   useEffect(() => {
-    // 1. Initial check from localStorage for fast initial render
-    const saved = localStorage.getItem('ticketx_user');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setUser({ role: 'customer', ...parsed });
-      } catch (e) {
-        console.error(e);
+    if (cooldownSeconds <= 0) return;
+    const interval = setInterval(() => {
+      setCooldownSeconds((prev) => {
+        if (prev <= 1) {
+          setIsPasswordLocked(false);
+          setPasswordAttempts(0);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [cooldownSeconds]);
+
+  const recordFailedPasswordAttempt = () => {
+    setPasswordAttempts((prev) => {
+      const updated = prev + 1;
+      if (updated >= 5) {
+        setIsPasswordLocked(true);
+        setCooldownSeconds(60);
+      }
+      return updated;
+    });
+  };
+
+  const resetPasswordAttempts = () => {
+    setPasswordAttempts(0);
+    setIsPasswordLocked(false);
+    setCooldownSeconds(0);
+  };
+
+  // Initialize Demo Session if present
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedDemo = localStorage.getItem('ticketx_demo_session');
+      if (storedDemo) {
+        try {
+          const parsed = JSON.parse(storedDemo);
+          if (parsed && parsed.identifier && parsed.accountKey) {
+            setDemoSessionUser(parsed);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+  }, []);
+
+  // SINGLE main Firebase onAuthStateChanged observer
+  useEffect(() => {
+    let profileUnsub: Unsubscribe | null = null;
+
+    const authUnsub = onAuthStateChanged(auth, async (fbUser: FirebaseUser | null) => {
+      if (profileUnsub) {
+        profileUnsub();
+        profileUnsub = null;
+      }
+
+      if (fbUser) {
+        setFirebaseUser(fbUser);
+        setDemoSessionUser(null);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('ticketx_demo_session');
+        }
+
+        const userDocRef = doc(db, 'users', fbUser.uid);
+
+        profileUnsub = onSnapshot(
+          userDocRef,
+          async (docSnap) => {
+            if (docSnap.exists()) {
+              const data = docSnap.data() as TicketXUserProfile;
+              setUser({
+                ...data,
+                uid: `firebase:${fbUser.uid}`,
+                id: fbUser.uid,
+                email: fbUser.email || data.email,
+                phone: data.phoneNumber || fbUser.phoneNumber || undefined,
+                emailVerified: fbUser.emailVerified || data.emailVerified,
+                photoURL: data.photoURL || fbUser.photoURL || undefined,
+                avatar: data.photoURL || fbUser.photoURL || undefined,
+              });
+            } else {
+              const initialProfileData = removeUndefined({
+                uid: `firebase:${fbUser.uid}`,
+                id: fbUser.uid,
+                name: fbUser.displayName || (fbUser.email ? fbUser.email.split('@')[0] : 'TicketX User'),
+                email: fbUser.email ?? null,
+                emailVerified: fbUser.emailVerified ?? false,
+                phoneNumber: fbUser.phoneNumber ?? null,
+                phone: fbUser.phoneNumber ?? null,
+                phoneVerified: Boolean(fbUser.phoneNumber),
+                photoURL: fbUser.photoURL ?? null,
+                avatar: fbUser.photoURL ?? null,
+                role: 'customer',
+                authMethods: fbUser.providerData.map((p) => p.providerId),
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              });
+
+              await setDoc(userDocRef, initialProfileData, { merge: true });
+              setUser(initialProfileData as unknown as TicketXUserProfile);
+            }
+            setLoading(false);
+          },
+          (err) => {
+            console.error('Firestore profile error:', err);
+            setLoading(false);
+          }
+        );
+      } else {
+        setFirebaseUser(null);
+        if (demoSessionUser) {
+          loadDemoSessionUser(demoSessionUser);
+        } else {
+          setUser(null);
+          setLoading(false);
+        }
+      }
+    });
+
+    return () => {
+      authUnsub();
+      if (profileUnsub) profileUnsub();
+    };
+  }, [demoSessionUser?.identifier]);
+
+  const loadDemoSessionUser = (demoSession: { identifier: string; accountKey: string; type: 'phone' | 'email' }, fallbackName?: string) => {
+    const storageKey = `ticketx:${demoSession.accountKey}:profile`;
+    let storedProfile: TicketXUserProfile | null = null;
+
+    if (typeof window !== 'undefined') {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) {
+        try {
+          storedProfile = JSON.parse(raw);
+        } catch (e) {
+          console.error(e);
+        }
       }
     }
 
-    // 2. Real-time Firebase Authentication State Observer
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
-      if (firebaseUser) {
-        // Look up existing profile in registry to preserve custom edited display names or venue owner roles
-        let existingUser: TicketXUser | null = null;
-        try {
-          const storedRegistry = localStorage.getItem(USERS_DB_KEY);
-          if (storedRegistry) {
-            const registry: Record<string, TicketXUser> = JSON.parse(storedRegistry);
-            existingUser = registry[firebaseUser.uid] || (firebaseUser.email ? registry[firebaseUser.email.toLowerCase()] : null);
-          }
-        } catch (e) {
-          console.error('Registry lookup error:', e);
-        }
+    if (!storedProfile) {
+      storedProfile = {
+        uid: demoSession.accountKey,
+        id: demoSession.accountKey,
+        name: fallbackName || (demoSession.type === 'phone' ? `TicketX User (+91 ${demoSession.identifier.slice(-4)})` : demoSession.identifier.split('@')[0]),
+        email: demoSession.type === 'email' ? demoSession.identifier : null,
+        phoneNumber: demoSession.type === 'phone' ? `+91${demoSession.identifier}` : null,
+        displayPhone: demoSession.type === 'phone' ? `+91 ${demoSession.identifier}` : null,
+        phoneVerified: demoSession.type === 'phone',
+        emailVerified: demoSession.type === 'email',
+        role: 'customer',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
 
-        const ticketxUser: TicketXUser = {
-          id: firebaseUser.uid, // Requirement 9: Stable Firebase user.uid identity
-          name: existingUser?.name || firebaseUser.displayName || (firebaseUser.email ? firebaseUser.email.split('@')[0] : 'TicketX Member'),
-          email: firebaseUser.email || existingUser?.email,
-          avatar: firebaseUser.photoURL || existingUser?.avatar,
-          authMethod: 'google',
-          role: existingUser?.role || 'customer',
-          createdAt: existingUser?.createdAt || new Date().toISOString(),
-        };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(storageKey, JSON.stringify(storedProfile));
+      }
+    } else if (fallbackName && storedProfile.name !== fallbackName) {
+      storedProfile.name = fallbackName;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(storageKey, JSON.stringify(storedProfile));
+      }
+    }
 
-        saveUserSession(ticketxUser);
-      } else {
-        // If current active session was Google auth, log out local session on Firebase logout
-        const currentSaved = localStorage.getItem('ticketx_user');
-        if (currentSaved) {
+    setUser(storedProfile);
+    setLoading(false);
+  };
+
+  // Account Registration Lookup
+  const checkAccountRegistered = async (identifier: string, type: 'email' | 'phone'): Promise<boolean> => {
+    if (!identifier) return false;
+    const clean = identifier.trim().toLowerCase();
+
+    // Check local storage accounts
+    if (typeof window !== 'undefined') {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.includes(':profile')) {
           try {
-            const parsed = JSON.parse(currentSaved);
-            if (parsed.authMethod === 'google') {
-              setUser(null);
-              localStorage.removeItem('ticketx_user');
-            }
+            const profile = JSON.parse(localStorage.getItem(key) || '{}');
+            if (type === 'email' && profile.email?.toLowerCase() === clean) return true;
+            if (type === 'phone' && profile.phoneNumber?.includes(clean.slice(-10))) return true;
           } catch (e) {
             console.error(e);
           }
         }
       }
-      setLoading(false);
-    });
+    }
 
-    return () => unsubscribe();
-  }, []);
-
-  const saveUserSession = (u: TicketXUser) => {
-    const normalizedUser = { role: u.role || 'customer', ...u };
-    setUser(normalizedUser);
-    localStorage.setItem('ticketx_user', JSON.stringify(normalizedUser));
-
-    // Save/update user in registry mapped by Firebase UID and email
+    // Check Firestore users collection
     try {
-      const storedRegistry = localStorage.getItem(USERS_DB_KEY);
-      const registry: Record<string, TicketXUser> = storedRegistry ? JSON.parse(storedRegistry) : {};
-      registry[u.id] = normalizedUser;
-      if (u.email) {
-        registry[u.email.toLowerCase()] = normalizedUser;
-      }
-      if (u.phone) {
-        registry[u.phone] = normalizedUser;
-      }
-      localStorage.setItem(USERS_DB_KEY, JSON.stringify(registry));
+      const usersRef = collection(db, 'users');
+      const q = type === 'email'
+        ? query(usersRef, where('email', '==', clean))
+        : query(usersRef, where('phoneNumber', '==', `+91${clean.slice(-10)}`));
+
+      const snap = await getDocs(q);
+      return !snap.empty;
     } catch (e) {
-      console.error(e);
+      console.error('Account lookup error:', e);
+      return false;
     }
   };
 
-  const setRole = (role: 'customer' | 'venue_owner' | 'admin') => {
-    if (user) {
-      saveUserSession({ ...user, role });
-    }
-  };
+  // Requirements 13, 14, 16, 17, 27: Post-OTP Verification Account Resolver
+  const resolvePostOtpAccount = async ({
+    identifier,
+    type,
+    name,
+  }: {
+    identifier: string;
+    type: 'phone' | 'email';
+    name?: string;
+  }): Promise<{ success: boolean; isNewUser?: boolean; error?: string }> => {
+    const clean = identifier.trim().toLowerCase();
+    const isRegistered = await checkAccountRegistered(clean, type);
 
-  const sendPhoneOtp = (phone: string) => {
-    const cleanPhone = phone.replace(/\D/g, '');
-    if (!/^[789]\d{9}$/.test(cleanPhone)) {
-      return { success: false, error: 'Enter a valid number' };
-    }
-
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = Date.now() + 5 * 60 * 1000;
-
-    const otpData = { phone: cleanPhone, code, expiresAt };
-    setPendingOtp(otpData);
-
-    console.log(`[TICKETX AUTH LOG] OTP requested for +91${cleanPhone}`);
-
-    return { success: true };
-  };
-
-  const verifyPhoneOtp = (otp: string) => {
-    const cleanOtp = otp.trim();
-
-    if (!pendingOtp) {
-      return { success: false, error: 'No active OTP request found. Please resend code.' };
+    if (auth.currentUser) {
+      await signOut(auth);
+      setFirebaseUser(null);
     }
 
-    if (Date.now() > pendingOtp.expiresAt) {
-      return { success: false, error: 'OTP has expired. Please request a new code.' };
-    }
+    const accountKey = type === 'phone' ? `phone:+91${clean.slice(-10)}` : `email:${clean}`;
+    const demoSession = { identifier: clean, accountKey, type };
 
-    if (cleanOtp.length !== 6 || !/^\d{6}$/.test(cleanOtp)) {
-      return { success: false, error: 'Please enter a valid 6-digit numeric OTP code.' };
-    }
-
-    if (!IS_DEV_MODE) {
-      if (cleanOtp !== pendingOtp.code) {
-        return { success: false, error: 'Invalid 6-digit OTP code. Please check and try again.' };
+    if (isRegistered) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('ticketx_demo_session', JSON.stringify(demoSession));
       }
+      setDemoSessionUser(demoSession);
+      loadDemoSessionUser(demoSession, name);
+      return { success: true, isNewUser: false };
     }
 
-    const phoneFormatted = `+91 ${pendingOtp.phone}`;
-    const masked = `+91 ••••••${pendingOtp.phone.slice(-4)}`;
+    if (!name) {
+      // Account does not exist, return isNewUser: true to ask for name
+      return { success: true, isNewUser: true };
+    }
 
-    let existingUser: TicketXUser | null = null;
+    // Create new account with provided name
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ticketx_demo_session', JSON.stringify(demoSession));
+    }
+    setDemoSessionUser(demoSession);
+    loadDemoSessionUser(demoSession, name);
+    return { success: true, isNewUser: false };
+  };
+
+  // EMAIL & PASSWORD SIGNUP
+  const signupWithEmail = async (data: {
+    name: string;
+    email: string;
+    pass: string;
+    phone: string;
+    gender?: string;
+    dob?: string;
+  }): Promise<{ success: boolean; error?: string }> => {
     try {
-      const storedRegistry = localStorage.getItem(USERS_DB_KEY);
-      if (storedRegistry) {
-        const registry: Record<string, TicketXUser> = JSON.parse(storedRegistry);
-        existingUser = registry[phoneFormatted] || null;
+      const cleanPhone = data.phone.replace(/\D/g, '').slice(0, 10);
+      if (!validateIndianPhone(cleanPhone)) {
+        return { success: false, error: 'Please enter a valid 10-digit number.' };
       }
-    } catch (e) {
-      console.error(e);
+
+      if (data.pass.length < 6) {
+        return { success: false, error: 'Password must be at least 6 characters.' };
+      }
+
+      if (data.dob && !validateMinimumAge16(data.dob)) {
+        return { success: false, error: "Doesn't meet age requirements." };
+      }
+
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('ticketx_demo_session');
+      }
+      setDemoSessionUser(null);
+
+      const userCred = await createUserWithEmailAndPassword(auth, data.email, data.pass);
+      const fbUser = userCred.user;
+
+      const profile = removeUndefined({
+        uid: `firebase:${fbUser.uid}`,
+        id: fbUser.uid,
+        name: data.name,
+        email: data.email ?? null,
+        emailVerified: false,
+        phoneNumber: `+91${cleanPhone}`,
+        displayPhone: `+91 ${cleanPhone}`,
+        phoneVerified: false,
+        gender: data.gender ?? 'Prefer not to say',
+        dob: data.dob ?? null,
+        role: 'customer',
+        authMethods: ['password'],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+
+      await setDoc(doc(db, 'users', fbUser.uid), profile, { merge: true });
+      await sendEmailVerification(fbUser).catch(() => {});
+
+      setUser(profile as unknown as TicketXUserProfile);
+      return { success: true };
+    } catch (err: any) {
+      let msg = 'Failed to create account.';
+      if (err.code === 'auth/email-already-in-use') {
+        msg = 'An account with this email already exists. Please sign in.';
+      }
+      return { success: false, error: msg };
     }
-
-    const targetUser: TicketXUser = existingUser || {
-      id: `usr_phone_${pendingOtp.phone}`,
-      name: `User ${pendingOtp.phone.slice(-4)}`,
-      phone: phoneFormatted,
-      displayPhone: masked,
-      authMethod: 'phone',
-      role: 'customer',
-      createdAt: new Date().toISOString(),
-    };
-
-    saveUserSession(targetUser);
-    setPendingOtp(null);
-    return { success: true };
   };
 
-  const loginWithEmail = (email: string, pass: string) => {
-    if (!email.includes('@') || pass.length < 6) {
-      return { success: false, error: 'Please enter a valid email address and password (min 6 chars).' };
+  // EMAIL & PASSWORD LOGIN
+  const loginWithEmail = async (email: string, pass: string): Promise<{ success: boolean; error?: string }> => {
+    if (isPasswordLocked) {
+      return { success: false, error: `Too many failed attempts. Try again in ${cooldownSeconds}s.` };
     }
 
-    const emailLower = email.toLowerCase().trim();
-    let existingUser: TicketXUser | null = null;
     try {
-      const storedRegistry = localStorage.getItem(USERS_DB_KEY);
-      if (storedRegistry) {
-        const registry: Record<string, TicketXUser> = JSON.parse(storedRegistry);
-        existingUser = registry[emailLower] || null;
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('ticketx_demo_session');
       }
-    } catch (e) {
-      console.error(e);
+      setDemoSessionUser(null);
+
+      await signInWithEmailAndPassword(auth, email, pass);
+      resetPasswordAttempts();
+      return { success: true };
+    } catch (err: any) {
+      recordFailedPasswordAttempt();
+
+      if (auth.currentUser) {
+        await signOut(auth);
+      }
+      setFirebaseUser(null);
+      setUser(null);
+
+      let msg = 'No account found. Sign up first.';
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        msg = 'Wrong password.';
+      } else if (err.code === 'auth/user-not-found') {
+        msg = 'No account found. Sign up first.';
+      }
+      return { success: false, error: msg };
     }
-
-    const nameFromEmail = emailLower.split('@')[0];
-    const formattedName = nameFromEmail.charAt(0).toUpperCase() + nameFromEmail.slice(1);
-
-    const targetUser: TicketXUser = existingUser || {
-      id: `usr_email_${emailLower.replace(/[^a-zA-Z0-9]/g, '_')}`,
-      name: formattedName,
-      email: emailLower,
-      authMethod: 'email',
-      role: 'customer',
-      createdAt: new Date().toISOString(),
-    };
-
-    saveUserSession(targetUser);
-    return { success: true };
   };
 
-  const signupWithEmail = (name: string, email: string, pass: string) => {
-    if (!name.trim() || !email.includes('@') || pass.length < 6) {
-      return { success: false, error: 'Please fill all required fields correctly.' };
-    }
-
-    const emailLower = email.toLowerCase().trim();
-
-    const newUser: TicketXUser = {
-      id: `usr_email_${emailLower.replace(/[^a-zA-Z0-9]/g, '_')}`,
-      name: name.trim(),
-      email: emailLower,
-      authMethod: 'email',
-      role: 'customer',
-      createdAt: new Date().toISOString(),
-    };
-
-    saveUserSession(newUser);
-    return { success: true };
-  };
-
-  // Requirements 7, 8, 9: Real Firebase Google Authentication Login
+  // Requirements 20, 21, 22, 23, 24: GOOGLE AUTHENTICATION AUDIT
   const loginWithGoogle = async (): Promise<{ success: boolean; error?: string }> => {
     try {
-      const fbUser = await firebaseLoginWithGoogle();
-      if (fbUser) {
-        return { success: true };
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('ticketx_demo_session');
       }
-      return { success: false, error: 'Failed to complete Google Sign-In.' };
+      setDemoSessionUser(null);
+
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      await signInWithPopup(auth, provider);
+      return { success: true };
     } catch (err: any) {
-      console.error('Google Auth login error:', err);
-      if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
-        return { success: false };
+      console.error('Google Auth Error:', err);
+      let errorMsg = 'Unable to sign in with Google. Please try again.';
+      if (err.code === 'auth/popup-closed-by-user') {
+        errorMsg = 'Sign in was cancelled.';
       }
-      if (err?.code === 'auth/unauthorized-domain') {
-        return {
-          success: false,
-          error: 'This domain is not authorized for Google Sign-In in Firebase Console. Please add domain under Firebase Auth Settings → Authorized Domains.',
-        };
-      }
-      return { success: false, error: err?.message || 'Unable to sign in with Google. Please try again.' };
+      return { success: false, error: errorMsg };
     }
   };
 
-  const updateUsername = (newName: string) => {
-    const trimmed = newName.trim();
-    if (!trimmed) {
-      return { success: false, error: 'Username cannot be empty or whitespace only.' };
+  const sendVerificationEmail = async (): Promise<{ success: boolean; error?: string }> => {
+    if (!auth.currentUser) return { success: false, error: 'User not authenticated.' };
+    try {
+      await sendEmailVerification(auth.currentUser);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
     }
-    if (trimmed.length > 50) {
-      return { success: false, error: 'Username must be under 50 characters.' };
+  };
+
+  const checkEmailVerified = async (): Promise<boolean> => {
+    if (!auth.currentUser) return false;
+    await auth.currentUser.reload();
+    return auth.currentUser.emailVerified;
+  };
+
+  const resetPassword = async (email: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: 'Failed to send password reset link.' };
+    }
+  };
+
+  const sendForgotPasswordOtp = async (
+    email: string
+  ): Promise<{ success: boolean; message?: string; demoOtp?: string; error?: string }> => {
+    try {
+      const isRegistered = await checkAccountRegistered(email, 'email');
+      if (!isRegistered) {
+        return { success: false, error: 'No account found. Sign up first.' };
+      }
+
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'send-otp', email }),
+      });
+      const data = await res.json();
+      if (!res.ok) return { success: false, error: data.error || 'Failed to send OTP.' };
+      return { success: true, message: data.message, demoOtp: data.demoOtp };
+    } catch (err: any) {
+      return { success: false, error: 'Network error sending OTP.' };
+    }
+  };
+
+  const verifyForgotPasswordOtp = async (
+    email: string,
+    otp: string,
+    newPass: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      if (newPass.length < 6) {
+        return { success: false, error: 'Password must be at least 6 characters.' };
+      }
+
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify-reset', email, otp, newPassword: newPass }),
+      });
+      const data = await res.json();
+      if (!res.ok) return { success: false, error: data.error || 'Password reset failed.' };
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: 'Network error verifying OTP.' };
+    }
+  };
+
+  // Safe Profile Data Updates
+  const updateProfileData = async (data: Partial<TicketXUserProfile>): Promise<{ success: boolean; error?: string }> => {
+    if (!user) return { success: false, error: 'No active profile.' };
+
+    if (data.dob && !validateMinimumAge16(data.dob)) {
+      return { success: false, error: "Doesn't meet age requirements." };
     }
 
-    if (user) {
-      const updated = { ...user, name: trimmed };
-      saveUserSession(updated);
-      return { success: true };
+    const updated = {
+      ...user,
+      ...data,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const cleanData = removeUndefined(updated as Record<string, unknown>);
+
+    if (firebaseUser) {
+      const userDocRef = doc(db, 'users', firebaseUser.uid);
+      await setDoc(userDocRef, cleanData, { merge: true });
+    } else if (demoSessionUser) {
+      const storageKey = `ticketx:${demoSessionUser.accountKey}:profile`;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(storageKey, JSON.stringify(cleanData));
+      }
     }
-    return { success: false, error: 'No active user session found.' };
+
+    setUser(cleanData as unknown as TicketXUserProfile);
+    return { success: true };
+  };
+
+  // PROFILE PHONE LINKING
+  const addPhoneToCurrentProfile = async (phone: string): Promise<{ success: boolean; error?: string }> => {
+    const cleanPhone = phone.replace(/\D/g, '').slice(0, 10);
+    if (!validateIndianPhone(cleanPhone)) {
+      return { success: false, error: 'Please enter a valid 10-digit number.' };
+    }
+
+    return await updateProfileData({
+      phoneNumber: `+91${cleanPhone}`,
+      displayPhone: `+91 ${cleanPhone}`,
+      phoneVerified: true,
+    });
+  };
+
+  // Profile Picture Upload
+  const uploadProfilePicture = async (file: File): Promise<{ success: boolean; url?: string; error?: string }> => {
+    if (!user) return { success: false, error: 'User not logged in.' };
+
+    try {
+      const version = Date.now();
+      let photoURL = '';
+
+      if (firebaseUser) {
+        const fileRef = ref(storage, `users/${firebaseUser.uid}/profile/avatar-${version}.webp`);
+        await uploadBytes(fileRef, file);
+        const downloadUrl = await getDownloadURL(fileRef);
+        photoURL = `${downloadUrl}?v=${version}`;
+      } else if (demoSessionUser) {
+        photoURL = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      await updateProfileData({ photoURL, avatar: photoURL });
+      return { success: true, url: photoURL };
+    } catch (err: any) {
+      return { success: false, error: 'Image upload failed.' };
+    }
+  };
+
+  const reauthenticateAndChangePassword = async (oldPass: string, newPass: string): Promise<{ success: boolean; error?: string }> => {
+    if (!auth.currentUser || !auth.currentUser.email) {
+      return { success: false, error: 'User re-authentication failed.' };
+    }
+
+    if (newPass.length < 6) {
+      return { success: false, error: 'Password must be at least 6 characters.' };
+    }
+
+    try {
+      const credential = EmailAuthProvider.credential(auth.currentUser.email, oldPass);
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      await updatePassword(auth.currentUser, newPass);
+      return { success: true };
+    } catch (err: any) {
+      let msg = 'Failed to change password.';
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        msg = 'Wrong password.';
+      }
+      return { success: false, error: msg };
+    }
   };
 
   const logout = async (): Promise<void> => {
-    try {
-      await logoutFirebaseUser();
-    } catch (e) {
-      console.error('Firebase signout error:', e);
+    setLoading(true);
+
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('ticketx_demo_session');
     }
+
+    setDemoSessionUser(null);
+    setFirebaseUser(null);
     setUser(null);
-    setPendingOtp(null);
-    localStorage.removeItem('ticketx_user');
+
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.error(e);
+    }
+
+    setLoading(false);
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        pendingOtp,
+        firebaseUser,
         loading,
-        sendPhoneOtp,
-        verifyPhoneOtp,
-        loginWithEmail,
+        session: currentSession,
+        checkAccountRegistered,
+        resolvePostOtpAccount,
+        passwordAttempts,
+        isPasswordLocked,
+        cooldownSeconds,
+        recordFailedPasswordAttempt,
+        resetPasswordAttempts,
         signupWithEmail,
+        loginWithEmail,
         loginWithGoogle,
-        updateUsername,
-        setRole,
+        sendVerificationEmail,
+        checkEmailVerified,
+        resetPassword,
+        sendForgotPasswordOtp,
+        verifyForgotPasswordOtp,
+        updateProfileData,
+        uploadProfilePicture,
+        addPhoneToCurrentProfile,
+        reauthenticateAndChangePassword,
         logout,
       }}
     >

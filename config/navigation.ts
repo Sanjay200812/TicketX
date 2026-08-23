@@ -30,17 +30,6 @@ export const TOP_NAV_ITEMS: NavItem[] = [
       { label: 'Martur', href: '/theatres?location=martur' },
     ],
   },
-  {
-    label: 'LOCATIONS',
-    href: '#locations',
-    hasDropdown: true,
-    children: [
-      { label: 'Current Location', href: '#current-location' },
-      { label: 'Saved Locations', href: '#saved-locations' },
-      { label: 'Use My Location', href: '#use-my-location' },
-      { label: 'Search Location', href: '#search-location' },
-    ],
-  },
 ];
 
 export const SIDEBAR_NAV_SECTIONS: NavSection[] = [
@@ -72,13 +61,16 @@ export const SIDEBAR_NAV_SECTIONS: NavSection[] = [
       },
       {
         label: 'Locations',
-        href: '#locations',
+        href: '#',
         icon: 'MapPin',
         hasDropdown: true,
         children: [
-          { label: 'Current Location', href: '#current-location' },
-          { label: 'Saved Locations', href: '#saved-locations' },
-          { label: 'Use My Location', href: '#use-my-location' },
+          { label: 'Guntur', href: 'guntur' },
+          { label: 'Vijayawada', href: 'vijayawada' },
+          { label: 'Narasaraopeta (NRT)', href: 'nrt' },
+          { label: 'Sattenapalli', href: 'sattenapalli' },
+          { label: 'Edlapadu', href: 'edlapadu' },
+          { label: 'Martur', href: 'martur' },
         ],
       },
       { label: 'Saved Movies', href: '/favorites', icon: 'Heart' },

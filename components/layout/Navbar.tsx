@@ -69,19 +69,20 @@ export function Navbar() {
 
             {/* TicketX Logo */}
             <Link href="/" className="flex items-center gap-2 relative group">
-              <span className="text-2xl font-black tracking-tighter text-white font-heading">
-                TICKET<span className="text-primary">X</span>
+              <span className="text-xl sm:text-2xl font-black tracking-tight text-white font-heading">
+                Ticket<span className="text-primary">X</span>
               </span>
             </Link>
 
-            {/* City Location Selector Button */}
+            {/* City Location Selector Button (Visible on both Mobile & Desktop) */}
             <button
               onClick={() => setIsCityModalOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-secondary/80 hover:bg-secondary text-gray-200 border border-white/10 transition-all"
+              className="flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs font-semibold px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-secondary/80 hover:bg-secondary text-gray-200 border border-white/10 transition-all shrink-0"
+              title="Change City"
             >
-              <MapPin className="w-3.5 h-3.5 text-primary" />
-              <span>{selectedLocation?.name || 'Select City'}</span>
-              <ChevronDown className="w-3 h-3 text-muted-foreground" />
+              <MapPin className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-primary shrink-0" />
+              <span className="truncate max-w-[80px] sm:max-w-[120px]">{selectedLocation?.name || 'Select City'}</span>
+              <ChevronDown className="w-3 h-3 text-muted-foreground shrink-0" />
             </button>
           </div>
 
@@ -95,13 +96,7 @@ export function Navbar() {
                 return (
                   <div key={item.label} className="relative">
                     <button
-                      onClick={() => {
-                        if (item.label === 'LOCATIONS') {
-                          setIsCityModalOpen(true);
-                        } else {
-                          setActiveDropdown(isDropdownOpen ? null : item.label);
-                        }
-                      }}
+                      onClick={() => setActiveDropdown(isDropdownOpen ? null : item.label)}
                       className={cn(
                         'text-xs font-bold tracking-wider transition-colors hover:text-white flex items-center gap-1 py-1 uppercase',
                         isActive || isDropdownOpen ? 'text-white' : 'text-gray-300'
@@ -204,8 +199,8 @@ export function Navbar() {
                 title={user.name || "Profile"}
                 aria-label="Profile"
               >
-                {user.avatar ? (
-                  <img src={user.avatar} alt={user.name || "User"} className="w-6 h-6 rounded-full object-cover" />
+                {user.photoURL || user.avatar ? (
+                  <img src={(user.photoURL || user.avatar) as string} alt={user.name || "User"} className="w-6 h-6 rounded-full object-cover" />
                 ) : (
                   <div className="w-6 h-6 rounded-full bg-primary text-white font-extrabold flex items-center justify-center text-[10px]">
                     {(user.name || user.email || 'U').charAt(0).toUpperCase()}

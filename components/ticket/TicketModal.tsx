@@ -5,10 +5,8 @@ import { X, Download, Share2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Booking } from '@/types/booking';
 import { TicketCard } from '@/components/ticket/TicketCard';
-import { downloadTicketPdf } from '@/lib/pdfGenerator';
-import { shareTicket } from '@/lib/ticketShare';
+import { downloadTicketJpg, shareTicketJpg } from '@/lib/ticketExport';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/context/AuthContext';
 
 interface TicketModalProps {
   isOpen: boolean;
@@ -17,7 +15,6 @@ interface TicketModalProps {
 }
 
 export function TicketModal({ isOpen, onClose, booking }: TicketModalProps) {
-  const { user } = useAuth();
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -36,15 +33,21 @@ export function TicketModal({ isOpen, onClose, booking }: TicketModalProps) {
 
   const handleDownload = async () => {
     if (!booking) return;
-    const name = user?.name || user?.email || user?.displayPhone || 'TicketX Customer';
-    await downloadTicketPdf(booking, name);
+    const ok = await downloadTicketJpg(booking);
+    if (ok) {
+      setToast('Ticket JPG Downloaded!');
+      setTimeout(() => setToast(null), 3000);
+    }
   };
 
   const handleShare = async () => {
     if (!booking) return;
-    const res = await shareTicket(booking);
+    const res = await shareTicketJpg(booking);
     if (res.success && res.method === 'clipboard') {
       setToast('Booking details copied to clipboard!');
+      setTimeout(() => setToast(null), 3000);
+    } else if (res.success && res.method === 'download') {
+      setToast('Downloaded Ticket JPG!');
       setTimeout(() => setToast(null), 3000);
     }
   };
@@ -90,7 +93,7 @@ export function TicketModal({ isOpen, onClose, booking }: TicketModalProps) {
                 onClick={handleDownload}
                 className="flex-1 rounded-full font-bold bg-emerald-600 hover:bg-emerald-500 text-white text-xs flex items-center justify-center gap-1.5"
               >
-                <Download className="w-3.5 h-3.5" /> Download
+                <Download className="w-3.5 h-3.5" /> Download JPG
               </Button>
               <Button
                 size="sm"
@@ -98,7 +101,7 @@ export function TicketModal({ isOpen, onClose, booking }: TicketModalProps) {
                 onClick={handleShare}
                 className="flex-1 rounded-full font-bold border-white/20 text-white hover:bg-white/10 text-xs flex items-center justify-center gap-1.5"
               >
-                <Share2 className="w-3.5 h-3.5" /> Share
+                <Share2 className="w-3.5 h-3.5" /> Share Ticket
               </Button>
             </div>
           </motion.div>
