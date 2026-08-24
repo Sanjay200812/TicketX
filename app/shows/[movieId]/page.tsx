@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, MapPin } from 'lucide-react';
+import { ChevronLeft, MapPin, Film, Calendar } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { movies } from '@/data/movies';
 import { DateSelector } from '@/components/booking/DateSelector';
@@ -13,7 +13,8 @@ import { TicketXShow as Show } from '@/types/show';
 import { TicketXTheatre as Theatre } from '@/types/theatre';
 import { TicketXMovie as Movie } from '@/types/movie';
 import { useLocation } from '@/context/LocationContext';
-import { getAvailableDatesForMovie, getTheatresForMovie } from '@/lib/data';
+import { getTheatresForMovie } from '@/lib/data';
+import { getTodayDateStr, getTomorrowDateStr, getNextDayDateStr } from '@/lib/date';
 
 export default function ShowsPage({ params }: { params: { movieId: string } }) {
   const router = useRouter();
@@ -23,25 +24,33 @@ export default function ShowsPage({ params }: { params: { movieId: string } }) {
     return movies.find((m) => m.id === params.movieId) || null;
   }, [params.movieId]);
 
+  // Today, Tomorrow, Next Day dynamic dates (Requirements 35, 36)
   const availableDates = useMemo(() => {
-    if (!movie) return [];
-    const dates = getAvailableDatesForMovie(movie.id, selectedLocation.id);
-    return dates.length > 0 ? dates : ["2026-08-22"];
-  }, [movie, selectedLocation.id]);
+    return [getTodayDateStr(), getTomorrowDateStr(), getNextDayDateStr()];
+  }, []);
 
-  const [selectedDate, setSelectedDate] = useState(availableDates[0] || "2026-08-22");
+  const [selectedDate, setSelectedDate] = useState<string>(availableDates[0]);
   const [selectedShow, setSelectedShow] = useState<{ show: Show; theatre: Theatre } | null>(null);
 
+  // Date-aware show filtering (Requirement 37)
   const theatresWithShows = useMemo(() => {
     if (!movie) return [];
     return getTheatresForMovie(movie.id, selectedLocation.id, selectedDate);
   }, [movie, selectedLocation.id, selectedDate]);
 
+  // Handle date change: clear stale selection (Requirement 38)
+  const handleDateChange = (newDate: string) => {
+    setSelectedDate(newDate);
+    setSelectedShow(null);
+  };
+
   if (!movie) {
     return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center">
-        <h2 className="text-2xl font-bold mb-4">Movie Not Found</h2>
-        <Link href="/movies" className="text-primary hover:underline">Back to Movies</Link>
+      <div className="min-h-[70vh] flex flex-col items-center justify-center pt-24">
+        <h2 className="text-2xl font-bold mb-4 font-heading">Movie Not Found</h2>
+        <Link href="/movies" className="text-primary hover:underline font-bold">
+          Back to Movies
+        </Link>
       </div>
     );
   }
@@ -73,16 +82,14 @@ export default function ShowsPage({ params }: { params: { movieId: string } }) {
 
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-3xl md:text-4xl font-bold font-heading mb-2">{movie.title}</h1>
-              </div>
+              <h1 className="text-3xl md:text-4xl font-bold font-heading mb-2">{movie.title}</h1>
               <div className="flex items-center gap-2 text-sm font-medium">
                 {movie.language && (
-                  <span className="text-muted-foreground bg-secondary px-2 py-1 rounded border border-white/5">
+                  <span className="text-muted-foreground bg-secondary px-2.5 py-1 rounded-lg border border-white/5 text-xs font-bold font-mono">
                     {movie.language}
                   </span>
                 )}
-                <span className="text-muted-foreground ml-2 flex items-center gap-1">
+                <span className="text-muted-foreground ml-2 flex items-center gap-1 text-xs">
                   <MapPin className="w-3.5 h-3.5 text-primary" /> {selectedLocation.name}
                 </span>
               </div>
@@ -92,32 +99,41 @@ export default function ShowsPage({ params }: { params: { movieId: string } }) {
       </div>
 
       <div className="container mx-auto px-4 md:px-6 py-8">
-        {/* Date Selector */}
-        {availableDates.length > 0 && (
-          <div className="mb-10">
-            <DateSelector dates={availableDates} selectedDate={selectedDate} onSelect={setSelectedDate} />
+        {/* Date Selector Tabs (Requirements 35, 36) */}
+        <div className="mb-10">
+          <div className="flex items-center gap-2 mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono">
+            <Calendar className="w-3.5 h-3.5 text-primary" />
+            <span>Select Date</span>
           </div>
-        )}
+          <DateSelector
+            dates={availableDates}
+            selectedDate={selectedDate}
+            onSelect={handleDateChange}
+          />
+        </div>
 
         {/* Theatres and Shows */}
         <div className="space-y-6">
           {theatresWithShows.length === 0 ? (
-            <div className="text-center py-20 bg-secondary/30 rounded-xl border border-white/5">
-              <h3 className="text-xl font-semibold mb-2">No shows available for this date</h3>
-              <p className="text-muted-foreground">Please choose another date or location above.</p>
+            <div className="text-center py-20 bg-secondary/30 rounded-2xl border border-white/5 shadow-xl">
+              <Film className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-40" />
+              <h3 className="text-xl font-bold font-heading mb-2">No shows available for this date</h3>
+              <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                No scheduled screenings for {new Date(`${selectedDate}T12:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}. Please select another date or location.
+              </p>
             </div>
           ) : (
             theatresWithShows.map(({ theatre, shows: tShows }) => (
               <motion.div
                 key={theatre.id}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-secondary/40 rounded-xl p-4 md:p-6 border border-white/5 flex flex-col lg:flex-row gap-6 lg:items-center"
+                className="bg-secondary/40 rounded-2xl p-5 md:p-6 border border-white/5 flex flex-col lg:flex-row gap-6 lg:items-center shadow-xl hover:border-white/15 transition-all"
               >
                 <div className="lg:w-1/3">
-                  <h3 className="text-xl font-semibold mb-2">{theatre.name}</h3>
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-3">
-                    <MapPin className="w-4 h-4 text-primary" /> {theatre.area || theatre.address}
+                  <h3 className="text-xl font-bold font-heading mb-1 text-white">{theatre.name}</h3>
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <MapPin className="w-3.5 h-3.5 text-primary shrink-0" /> {theatre.area || theatre.address}
                   </div>
                 </div>
 
@@ -128,13 +144,13 @@ export default function ShowsPage({ params }: { params: { movieId: string } }) {
                       onClick={() => handleShowSelect(show, theatre)}
                       whileHover={{ scale: 1.03 }}
                       whileTap={{ scale: 0.97 }}
-                      className="group flex flex-col items-center justify-center p-3 border border-white/10 rounded-lg bg-background hover:border-primary/50 hover:bg-primary/5 transition-all min-w-[105px]"
+                      className="group flex flex-col items-center justify-center px-4 py-3 border border-white/10 rounded-xl bg-black/40 hover:border-primary hover:bg-primary/10 transition-all min-w-[105px] shadow-md"
                     >
-                      <span className="text-sm font-semibold text-white group-hover:text-primary transition-colors">
+                      <span className="text-sm font-extrabold font-mono text-white group-hover:text-primary transition-colors">
                         {show.time}
                       </span>
                       {show.screenName && (
-                        <span className="text-[10px] text-muted-foreground uppercase mt-0.5 tracking-wider">
+                        <span className="text-[10px] text-muted-foreground uppercase mt-0.5 tracking-wider font-mono">
                           {show.screenName}
                         </span>
                       )}
@@ -160,7 +176,7 @@ export default function ShowsPage({ params }: { params: { movieId: string } }) {
             language: movie.language || 'Telugu',
             genres: movie.genres || [],
             duration: movie.duration || '2h',
-            releaseDate: movie.releaseDate || '2026-08-22',
+            releaseDate: movie.releaseDate || selectedDate,
             description: movie.description || '',
             cast: movie.cast || [],
             crew: movie.crew || [],

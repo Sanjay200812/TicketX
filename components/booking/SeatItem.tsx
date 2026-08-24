@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from 'framer-motion';
-import { Crown, Check, X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { Seat as SeatType } from '@/types/seat';
 
 interface SeatItemProps {
@@ -19,10 +19,7 @@ export function SeatItem({ seat, isSelected, onSelect }: SeatItemProps) {
     return <div className="w-6 h-6 sm:w-7 sm:h-7" />;
   }
 
-  const catLower = (seat.category || '').toLowerCase();
-  const isOnLand = catLower.includes('land') || catLower.includes('recliner') || catLower.includes('sofa') || catLower.includes('luxury');
-
-  // Requirement 6: Minimal, compact, neat seat styling (Reference Image 3 style)
+  // Requirement 27: Clean, compact, thin border seat styles
   let fillClass = 'bg-secondary/40 border-white/20 text-gray-300 hover:border-white/60 hover:bg-secondary';
 
   if (isBooked) {
@@ -31,14 +28,12 @@ export function SeatItem({ seat, isSelected, onSelect }: SeatItemProps) {
     fillClass = 'bg-rose-600 border-rose-400 text-white font-bold shadow-[0_0_12px_rgba(225,29,72,0.8)]';
   }
 
-  const sizeClass = isOnLand
-    ? 'w-10 h-7 sm:w-11 sm:h-8 rounded-lg border font-bold'
-    : 'w-6 h-6 sm:w-7 sm:h-7 rounded-md border text-[10px] font-semibold';
+  const sizeClass = 'w-6 h-6 sm:w-7 sm:h-7 rounded-md border text-[10px] font-semibold';
 
   return (
     <div className="relative group">
       <motion.button
-        whileHover={isBooked ? {} : { scale: isOnLand ? 1.05 : 1.1 }}
+        whileHover={isBooked ? {} : { scale: 1.1 }}
         whileTap={isBooked ? {} : { scale: 0.92 }}
         animate={isSelected ? { scale: [0.95, 1.08, 1] } : {}}
         transition={{ duration: 0.15 }}
@@ -52,8 +47,7 @@ export function SeatItem({ seat, isSelected, onSelect }: SeatItemProps) {
         ) : isSelected ? (
           <Check className="w-3.5 h-3.5 text-white stroke-[3]" />
         ) : (
-          <span className="leading-none flex items-center justify-center gap-0.5">
-            {isOnLand && <Crown className="w-2.5 h-2.5 text-amber-400" />}
+          <span className="leading-none flex items-center justify-center">
             {seat.number}
           </span>
         )}

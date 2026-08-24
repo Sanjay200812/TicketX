@@ -60,6 +60,12 @@ const config: Config = {
         "gradient-conic":
           "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
       },
+      fontFamily: {
+        sans: ["var(--font-inter)", "sans-serif"],
+        heading: ["var(--font-serif-heading)", "var(--font-heading)", "serif"],
+        serif: ["var(--font-serif-heading)", "Georgia", "serif"],
+        mono: ["monospace"],
+      },
     },
   },
   plugins: [],

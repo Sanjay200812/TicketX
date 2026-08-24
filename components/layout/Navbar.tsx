@@ -9,16 +9,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from '@/context/LocationContext';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
+import { useSidebar } from '@/context/SidebarContext';
 import { CitySelectorModal } from '@/components/location/CitySelectorModal';
 import { GlobalSearchModal } from '@/components/search/GlobalSearchModal';
 import { Sidebar } from './Sidebar';
 import { TOP_NAV_ITEMS } from '@/config/navigation';
+import { getTheatresForLocation } from '@/lib/data';
 
 export function Navbar() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const { toggleSidebar, isDesktopExpanded } = useSidebar();
 
   // Dropdown states
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
@@ -28,20 +30,36 @@ export function Navbar() {
   const { user } = useAuth();
   const { favoriteIds } = useFavorites();
 
+  // Theatres for current active city
+  const cityTheatres = getTheatresForLocation(selectedLocation.id);
+
+  // Close dropdown on route change
+  useEffect(() => {
+    setActiveDropdown(null);
+  }, [pathname]);
+
+  // Handle scroll effect
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
+      if (window.scrollY > 20) {
+        setScrolled(true);
+      } else {
+        setScrolled(false);
+      }
     };
+
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Handle outside click for dropdown
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setActiveDropdown(null);
       }
     };
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
@@ -50,17 +68,19 @@ export function Navbar() {
     <>
       <header
         className={cn(
-          'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
+          'fixed top-0 left-0 right-0 z-40 transition-all duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)]',
+          isDesktopExpanded ? 'lg:pl-[260px]' : 'lg:pl-[68px]',
           scrolled ? 'bg-black/90 backdrop-blur-md border-b border-white/10 py-3' : 'bg-transparent py-4'
         )}
       >
         <div className="container mx-auto px-4 md:px-6 flex items-center justify-between" ref={dropdownRef}>
-          {/* LEFT: Sidebar Opener (Hamburger Button) + Logo + City Selector */}
+          {/* LEFT: Sidebar Opener (Mobile Hamburger) + Logo + City Selector */}
           <div className="flex items-center gap-3 md:gap-4">
-            {/* Hamburger / Sidebar Menu Button on Left */}
+            {/* Hamburger / Sidebar Menu Button on Mobile */}
             <button
-              onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-xl text-white hover:bg-white/10 transition-colors flex items-center justify-center focus:outline-none"
+              type="button"
+              onClick={toggleSidebar}
+              className="lg:hidden p-2 rounded-xl text-white hover:bg-white/10 transition-colors flex items-center justify-center focus:outline-none cursor-pointer"
               aria-label="Open navigation drawer"
               title="Menu"
             >
@@ -92,7 +112,7 @@ export function Navbar() {
               const isActive = pathname === item.href;
               const isDropdownOpen = activeDropdown === item.label;
 
-              if (item.hasDropdown) {
+              if (item.hasDropdown && item.label === 'THEATRES') {
                 return (
                   <div key={item.label} className="relative">
                     <button
@@ -103,27 +123,38 @@ export function Navbar() {
                       )}
                     >
                       <span>{item.label}</span>
-                      {/* Dropdown Arrow ONLY on Theatres & Locations */}
                       <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isDropdownOpen ? 'rotate-180 text-primary' : 'text-gray-400'}`} />
                     </button>
 
-                    {/* Theatres / Locations Dropdown Box */}
+                    {/* Theatres Dropdown Box with city-isolated items */}
                     <AnimatePresence>
-                      {isDropdownOpen && item.children && (
+                      {isDropdownOpen && (
                         <motion.div
                           initial={{ opacity: 0, y: 8 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: 8 }}
-                          className="absolute left-0 mt-2 w-48 bg-[#141418] border border-white/15 rounded-2xl shadow-2xl py-2 z-50 font-sans text-xs"
+                          className="absolute left-0 mt-2 w-56 bg-[#141418] border border-white/15 rounded-2xl shadow-2xl py-2 z-50 font-sans text-xs"
                         >
-                          {item.children.map((child) => (
+                          <Link
+                            href="/theatres"
+                            onClick={() => setActiveDropdown(null)}
+                            className="block px-4 py-2 text-primary font-bold hover:bg-white/5 transition-colors border-b border-white/5"
+                          >
+                            All Theatres Directory →
+                          </Link>
+
+                          <div className="px-4 py-1.5 text-[10px] text-muted-foreground font-mono font-bold uppercase tracking-wider">
+                            In {selectedLocation.name}:
+                          </div>
+
+                          {cityTheatres.map((th) => (
                             <Link
-                              key={child.label}
-                              href={child.href}
+                              key={th.id}
+                              href={`/theatres/${th.id}`}
                               onClick={() => setActiveDropdown(null)}
-                              className="block px-4 py-2 text-gray-300 hover:text-white hover:bg-white/5 transition-colors font-medium"
+                              className="block px-4 py-2 text-gray-300 hover:text-white hover:bg-white/5 transition-colors font-medium truncate"
                             >
-                              {child.label}
+                              {th.name}
                             </Link>
                           ))}
                         </motion.div>
@@ -166,7 +197,7 @@ export function Navbar() {
               <Search className="w-5 h-5 text-primary" />
             </button>
 
-            {/* Saved Movies Heart Icon ONLY */}
+            {/* Saved Movies Heart Icon */}
             <Link
               href="/favorites"
               className="p-2 rounded-full text-gray-300 hover:text-white hover:bg-white/10 transition-colors relative flex items-center justify-center"
@@ -181,7 +212,7 @@ export function Navbar() {
               )}
             </Link>
 
-            {/* My Bookings Icon Control (Requirement 1) */}
+            {/* My Bookings Icon Control */}
             <Link
               href={user ? "/my-bookings" : "/login?redirect=/my-bookings"}
               className="p-2 rounded-full text-gray-300 hover:text-white hover:bg-white/10 transition-colors relative flex items-center justify-center"
@@ -191,7 +222,7 @@ export function Navbar() {
               <Ticket className="w-5 h-5 text-amber-400" />
             </Link>
 
-            {/* Login / Compact Account Control (Requirements 2, 3) */}
+            {/* Login / Compact Account Control */}
             {user ? (
               <Link
                 href="/profile"
@@ -220,7 +251,7 @@ export function Navbar() {
       </header>
 
       {/* Unified Left Sidebar Component */}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar onOpenSearchModal={() => setIsSearchModalOpen(true)} />
 
       {/* Global Search & Location Modals */}
       <CitySelectorModal />

@@ -16,6 +16,7 @@ interface TicketModalProps {
 
 export function TicketModal({ isOpen, onClose, booking }: TicketModalProps) {
   const [toast, setToast] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -32,11 +33,16 @@ export function TicketModal({ isOpen, onClose, booking }: TicketModalProps) {
   }, [isOpen, onClose]);
 
   const handleDownload = async () => {
-    if (!booking) return;
+    if (!booking || isDownloading) return;
+    setIsDownloading(true);
     const ok = await downloadTicketJpg(booking);
+    setIsDownloading(false);
     if (ok) {
-      setToast('Ticket JPG Downloaded!');
+      setToast('Ticket downloaded successfully!');
       setTimeout(() => setToast(null), 3000);
+    } else {
+      setToast('Unable to download ticket. Please try again.');
+      setTimeout(() => setToast(null), 4000);
     }
   };
 
@@ -47,7 +53,7 @@ export function TicketModal({ isOpen, onClose, booking }: TicketModalProps) {
       setToast('Booking details copied to clipboard!');
       setTimeout(() => setToast(null), 3000);
     } else if (res.success && res.method === 'download') {
-      setToast('Downloaded Ticket JPG!');
+      setToast('Ticket downloaded!');
       setTimeout(() => setToast(null), 3000);
     }
   };
@@ -65,7 +71,7 @@ export function TicketModal({ isOpen, onClose, booking }: TicketModalProps) {
           />
 
           {toast && (
-            <div className="fixed top-20 z-[120] bg-emerald-500/90 text-white font-bold text-xs px-5 py-2 rounded-full shadow-2xl">
+            <div className="fixed top-20 z-[120] bg-emerald-500/95 text-white font-bold text-xs px-5 py-2.5 rounded-full shadow-2xl animate-bounce">
               {toast}
             </div>
           )}
@@ -79,7 +85,7 @@ export function TicketModal({ isOpen, onClose, booking }: TicketModalProps) {
           >
             <button
               onClick={onClose}
-              className="absolute -top-12 right-0 z-20 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors"
+              className="absolute -top-12 right-0 z-20 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -91,9 +97,10 @@ export function TicketModal({ isOpen, onClose, booking }: TicketModalProps) {
               <Button
                 size="sm"
                 onClick={handleDownload}
-                className="flex-1 rounded-full font-bold bg-emerald-600 hover:bg-emerald-500 text-white text-xs flex items-center justify-center gap-1.5"
+                disabled={isDownloading}
+                className="flex-1 rounded-full font-bold bg-primary hover:bg-primary/90 text-white text-xs flex items-center justify-center gap-1.5 shadow-md"
               >
-                <Download className="w-3.5 h-3.5" /> Download JPG
+                <Download className="w-3.5 h-3.5" /> {isDownloading ? 'Downloading...' : 'Download Ticket'}
               </Button>
               <Button
                 size="sm"

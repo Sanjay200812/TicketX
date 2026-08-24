@@ -1,48 +1,72 @@
 import { TicketXSeatLayout } from '@/types/seatLayouts';
 import { createSeatGroup, createRowFromGroups } from './builder';
 
+// 2-Class Seating: Gold ₹295, Silver ₹150 (Total: 160 seats)
+// New shows start 100% available with no fake preoccupied seats
 export const gsCinemasLayout: TicketXSeatLayout = {
   id: 'layout-gs-cinemas',
   theatreId: 'gs-cinemas',
   locationId: 'guntur',
   theatreName: 'GS Cinemas, Near Lilatha Hospital',
   screenPosition: 'bottom',
-  capacity: 220,
-  verifiedCapacity: 220,
+  capacity: 160,
+  verifiedCapacity: 160,
   sections: [
     {
       id: 'sec-gold',
       name: 'Gold',
-      price: 140,
+      categoryKey: 'gold',
+      price: 295,
       priceStatus: 'confirmed',
       rows: [
         createRowFromGroups('A', [
-          createSeatGroup('A', 1, 8, 'sec-gold', [2]),
-          createSeatGroup('A', 9, 8, 'sec-gold', [12, 13]),
+          createSeatGroup('A', 1, 5, 'sec-gold'),
+          createSeatGroup('A', 6, 10, 'sec-gold'),
+          createSeatGroup('A', 16, 5, 'sec-gold'),
         ]),
         createRowFromGroups('B', [
-          createSeatGroup('B', 1, 8, 'sec-gold', [3]),
-          createSeatGroup('B', 9, 8, 'sec-gold', [14]),
+          createSeatGroup('B', 1, 5, 'sec-gold'),
+          createSeatGroup('B', 6, 10, 'sec-gold'),
+          createSeatGroup('B', 16, 5, 'sec-gold'),
         ]),
         createRowFromGroups('C', [
-          createSeatGroup('C', 1, 8, 'sec-gold'),
-          createSeatGroup('C', 9, 8, 'sec-gold', [11, 15]),
+          createSeatGroup('C', 1, 5, 'sec-gold'),
+          createSeatGroup('C', 6, 10, 'sec-gold'),
+          createSeatGroup('C', 16, 5, 'sec-gold'),
         ]),
       ],
     },
     {
       id: 'sec-silver',
       name: 'Silver',
-      price: 100,
+      categoryKey: 'silver',
+      price: 150,
       priceStatus: 'confirmed',
       rows: [
         createRowFromGroups('D', [
-          createSeatGroup('D', 1, 8, 'sec-silver', [4]),
-          createSeatGroup('D', 9, 8, 'sec-silver'),
+          createSeatGroup('D', 1, 5, 'sec-silver'),
+          createSeatGroup('D', 6, 10, 'sec-silver'),
+          createSeatGroup('D', 16, 5, 'sec-silver'),
         ]),
         createRowFromGroups('E', [
-          createSeatGroup('E', 1, 8, 'sec-silver', [1]),
-          createSeatGroup('E', 9, 8, 'sec-silver', [16]),
+          createSeatGroup('E', 1, 5, 'sec-silver'),
+          createSeatGroup('E', 6, 10, 'sec-silver'),
+          createSeatGroup('E', 16, 5, 'sec-silver'),
+        ]),
+        createRowFromGroups('F', [
+          createSeatGroup('F', 1, 5, 'sec-silver'),
+          createSeatGroup('F', 6, 10, 'sec-silver'),
+          createSeatGroup('F', 16, 5, 'sec-silver'),
+        ]),
+        createRowFromGroups('G', [
+          createSeatGroup('G', 1, 5, 'sec-silver'),
+          createSeatGroup('G', 6, 10, 'sec-silver'),
+          createSeatGroup('G', 16, 5, 'sec-silver'),
+        ]),
+        createRowFromGroups('H', [
+          createSeatGroup('H', 1, 5, 'sec-silver'),
+          createSeatGroup('H', 6, 10, 'sec-silver'),
+          createSeatGroup('H', 16, 5, 'sec-silver'),
         ]),
       ],
     },

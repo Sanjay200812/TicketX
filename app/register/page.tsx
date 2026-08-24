@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { User, Mail, Lock, Eye, EyeOff, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
@@ -12,6 +12,14 @@ export default function RegisterPage() {
   const router = useRouter();
   const { signupWithEmail } = useAuth();
 
+  // Field Refs for seamless keyboard navigation (Requirement 1)
+  const nameRef = useRef<HTMLInputElement | null>(null);
+  const emailRef = useRef<HTMLInputElement | null>(null);
+  const phoneRef = useRef<HTMLInputElement | null>(null);
+  const passwordRef = useRef<HTMLInputElement | null>(null);
+  const confirmPasswordRef = useRef<HTMLInputElement | null>(null);
+  const dobRef = useRef<HTMLInputElement | null>(null);
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,11 +27,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [phone, setPhone] = useState('');
   const [gender, setGender] = useState('Male');
-
-  // DOB States
-  const [dobDay, setDobDay] = useState('');
-  const [dobMonth, setDobMonth] = useState('');
-  const [dobYear, setDobYear] = useState('');
+  const [dob, setDob] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,13 +37,8 @@ export default function RegisterPage() {
   const isPasswordValid = password.length >= 6;
   const isPhoneValid = validateIndianPhone(phone);
 
-  // DOB Format & Age Check
-  const formattedDob =
-    dobDay.length === 2 && dobMonth.length === 2 && dobYear.length === 4
-      ? `${dobYear}-${dobMonth.padStart(2, '0')}-${dobDay.padStart(2, '0')}`
-      : '';
-
-  const isDobAgeValid = formattedDob ? validateMinimumAge16(formattedDob) : false;
+  // DOB Age Validation
+  const isDobAgeValid = dob ? validateMinimumAge16(dob) : false;
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +46,7 @@ export default function RegisterPage() {
     setSuccess(null);
 
     if (!isPhoneValid) {
-      setError('Please enter a valid 10-digit mobile number.');
+      setError('Enter a valid number');
       return;
     }
 
@@ -61,7 +60,7 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!formattedDob || !isDobAgeValid) {
+    if (!dob || !isDobAgeValid) {
       setError("Doesn't meet age requirements.");
       return;
     }
@@ -73,7 +72,7 @@ export default function RegisterPage() {
       pass: password,
       phone,
       gender,
-      dob: formattedDob,
+      dob,
     });
     setLoading(false);
 
@@ -83,7 +82,7 @@ export default function RegisterPage() {
       setSuccess('Account created successfully! Redirecting to home...');
       setTimeout(() => {
         router.push('/');
-      }, 1500);
+      }, 1200);
     }
   };
 
@@ -100,7 +99,6 @@ export default function RegisterPage() {
             </span>
           </Link>
           <h1 className="text-xl font-bold font-heading text-white">Create Account</h1>
-          {/* Requirement 2: Exact updated signup tagline */}
           <p className="text-xs text-muted-foreground">
             Join TicketX for seamless bookings, digital tickets &amp; faster movie access.
           </p>
@@ -126,11 +124,20 @@ export default function RegisterPage() {
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
+                ref={nameRef}
                 type="text"
+                autoComplete="name"
+                enterKeyHint="next"
                 required
                 placeholder="John Doe"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    emailRef.current?.focus();
+                  }
+                }}
                 className="pl-9 bg-black/40 border-white/10 text-white text-sm"
               />
             </div>
@@ -141,11 +148,20 @@ export default function RegisterPage() {
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
+                ref={emailRef}
                 type="email"
+                autoComplete="email"
+                enterKeyHint="next"
                 required
                 placeholder="name@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    phoneRef.current?.focus();
+                  }
+                }}
                 className="pl-9 bg-black/40 border-white/10 text-white text-sm"
               />
             </div>
@@ -158,13 +174,22 @@ export default function RegisterPage() {
                 +91
               </span>
               <Input
+                ref={phoneRef}
                 type="tel"
                 inputMode="numeric"
+                autoComplete="tel"
+                enterKeyHint="next"
                 maxLength={10}
                 required
                 placeholder="9876543210"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    passwordRef.current?.focus();
+                  }
+                }}
                 className="bg-black/40 border-white/10 text-white text-sm tracking-wider font-mono"
               />
             </div>
@@ -176,11 +201,20 @@ export default function RegisterPage() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
+                  ref={passwordRef}
                   type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  enterKeyHint="next"
                   required
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      confirmPasswordRef.current?.focus();
+                    }
+                  }}
                   className="pl-9 pr-10 bg-black/40 border-white/10 text-white text-sm"
                 />
                 <button
@@ -204,11 +238,20 @@ export default function RegisterPage() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
+                  ref={confirmPasswordRef}
                   type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  enterKeyHint="next"
                   required
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      dobRef.current?.focus();
+                    }
+                  }}
                   className="pl-9 bg-black/40 border-white/10 text-white text-sm"
                 />
               </div>
@@ -232,39 +275,18 @@ export default function RegisterPage() {
 
             <div>
               <label className="text-xs font-semibold text-gray-300 block mb-1.5">
-                Date of Birth (DD/MM/YYYY) *
+                Date of Birth *
               </label>
-              <div className="grid grid-cols-3 gap-2">
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={2}
-                  placeholder="DD"
-                  value={dobDay}
-                  onChange={(e) => setDobDay(e.target.value.replace(/\D/g, '').slice(0, 2))}
-                  className="bg-black/40 border-white/10 text-white text-center font-mono text-xs"
-                />
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={2}
-                  placeholder="MM"
-                  value={dobMonth}
-                  onChange={(e) => setDobMonth(e.target.value.replace(/\D/g, '').slice(0, 2))}
-                  className="bg-black/40 border-white/10 text-white text-center font-mono text-xs"
-                />
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={4}
-                  placeholder="YYYY"
-                  value={dobYear}
-                  onChange={(e) => setDobYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                  className="bg-black/40 border-white/10 text-white text-center font-mono text-xs font-bold"
-                />
-              </div>
-              {/* Requirement 1: Exact age error copy */}
-              {formattedDob && !isDobAgeValid && (
+              <Input
+                ref={dobRef}
+                type="date"
+                required
+                max={new Date().toISOString().split('T')[0]}
+                value={dob}
+                onChange={(e) => setDob(e.target.value)}
+                className="bg-black/40 border-white/10 text-white text-sm"
+              />
+              {dob && !isDobAgeValid && (
                 <p className="text-[10px] text-amber-300 font-bold mt-1">Doesn&apos;t meet age requirements.</p>
               )}
             </div>

@@ -7,6 +7,7 @@ import { useLocation } from '@/context/LocationContext';
 import { getMoviesForTheatre } from '@/lib/data';
 import { theatres } from '@/data/theatres';
 import { locations } from '@/data/locations';
+import { TicketXHeading } from '@/components/shared/TicketXHeading';
 
 const CITY_FILTER_TABS = [
   { id: 'all', name: 'All Cities' },
@@ -64,15 +65,13 @@ export default function TheatresPage() {
     <div className="min-h-screen pt-24 pb-20 bg-background">
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl md:text-5xl font-bold font-heading">
-              TicketX Cinema Directory
-            </h1>
-            <p className="text-muted-foreground text-sm mt-1 flex items-center gap-1.5">
-              <Building2 className="w-4 h-4 text-primary" />
-              Active cinemas across bookable locations in India
-            </p>
-          </div>
+          <TicketXHeading
+            subtitle="Active cinemas across bookable locations in Andhra Pradesh."
+            size="lg"
+            icon={<Building2 className="w-7 h-7" />}
+          >
+            TicketX Theatres
+          </TicketXHeading>
         </div>
 
         {/* CITY FILTER TABS */}

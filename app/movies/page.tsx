@@ -11,6 +11,8 @@ import { getMoviesForLocation } from '@/lib/data';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
+import { TicketXHeading } from '@/components/shared/TicketXHeading';
+
 export default function MoviesPage() {
   const { selectedLocation } = useLocation();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -28,7 +30,7 @@ export default function MoviesPage() {
     }));
   }, [moviesForLocation]);
 
-  // Requirement 28, 29, 30: Real-time filtering by title & language scoped to selected location
+  // Real-time filtering by title & language scoped to selected location
   const filteredMovies = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return formattedMovies;
@@ -48,14 +50,12 @@ export default function MoviesPage() {
     <div className="pt-24 pb-20 min-h-screen">
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-3xl md:text-5xl font-bold font-heading mb-2">
-              Movies Playing in {selectedLocation.name}
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              Browse films currently playing across local cinemas in {selectedLocation.name}.
-            </p>
-          </div>
+          <TicketXHeading
+            subtitle={`Browse films currently playing across local cinemas in ${selectedLocation.name}.`}
+            size="lg"
+          >
+            Movies Playing in {selectedLocation.name}
+          </TicketXHeading>
 
           {/* Requirement 26, 27: Search button expands into animated search bar */}
           <div className="shrink-0 flex items-center justify-end">

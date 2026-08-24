@@ -1,84 +1,72 @@
 import { TicketXSeatLayout } from '@/types/seatLayouts';
 import { createSeatGroup, createRowFromGroups } from './builder';
 
+// 2-Class Seating: Gold ₹295, Silver ₹150 (Total: 160 seats)
+// New shows start 100% available with no fake preoccupied seats
 export const pallaviKeerthanaLayout: TicketXSeatLayout = {
   id: 'layout-pallavi-keerthana-complex',
   theatreId: 'pallavi-keerthana-complex',
   locationId: 'guntur',
   theatreName: 'Pallavi Keerthana Complex, Sambasiva Pet',
   screenPosition: 'bottom',
-  capacity: 270,
-  verifiedCapacity: 270,
+  capacity: 160,
+  verifiedCapacity: 160,
   sections: [
     {
-      id: 'sec-recliner',
-      name: 'Recliner',
-      price: 200,
+      id: 'sec-gold',
+      name: 'Gold',
+      categoryKey: 'gold',
+      price: 295,
       priceStatus: 'confirmed',
       rows: [
         createRowFromGroups('A', [
-          createSeatGroup('A', 1, 8, 'sec-recliner', [3, 4]),
-          createSeatGroup('A', 9, 8, 'sec-recliner', [12, 13]),
+          createSeatGroup('A', 1, 5, 'sec-gold'),
+          createSeatGroup('A', 6, 10, 'sec-gold'),
+          createSeatGroup('A', 16, 5, 'sec-gold'),
+        ]),
+        createRowFromGroups('B', [
+          createSeatGroup('B', 1, 5, 'sec-gold'),
+          createSeatGroup('B', 6, 10, 'sec-gold'),
+          createSeatGroup('B', 16, 5, 'sec-gold'),
+        ]),
+        createRowFromGroups('C', [
+          createSeatGroup('C', 1, 5, 'sec-gold'),
+          createSeatGroup('C', 6, 10, 'sec-gold'),
+          createSeatGroup('C', 16, 5, 'sec-gold'),
         ]),
       ],
     },
     {
-      id: 'sec-sofa',
-      name: 'Sofa',
+      id: 'sec-silver',
+      name: 'Silver',
+      categoryKey: 'silver',
       price: 150,
       priceStatus: 'confirmed',
       rows: [
-        createRowFromGroups('B', [
-          createSeatGroup('B', 1, 9, 'sec-sofa', [2]),
-          createSeatGroup('B', 10, 9, 'sec-sofa', [14]),
-        ]),
-        createRowFromGroups('C', [
-          createSeatGroup('C', 1, 9, 'sec-sofa'),
-          createSeatGroup('C', 10, 9, 'sec-sofa', [11, 15]),
-        ]),
-      ],
-    },
-    {
-      id: 'sec-lower-balcony',
-      name: 'Lower Balcony',
-      price: 100,
-      priceStatus: 'confirmed',
-      rows: [
         createRowFromGroups('D', [
-          createSeatGroup('D', 1, 10, 'sec-lower-balcony', [5]),
-          createSeatGroup('D', 11, 10, 'sec-lower-balcony', [18]),
+          createSeatGroup('D', 1, 5, 'sec-silver'),
+          createSeatGroup('D', 6, 10, 'sec-silver'),
+          createSeatGroup('D', 16, 5, 'sec-silver'),
         ]),
         createRowFromGroups('E', [
-          createSeatGroup('E', 1, 10, 'sec-lower-balcony', [1]),
-          createSeatGroup('E', 11, 10, 'sec-lower-balcony', [19]),
+          createSeatGroup('E', 1, 5, 'sec-silver'),
+          createSeatGroup('E', 6, 10, 'sec-silver'),
+          createSeatGroup('E', 16, 5, 'sec-silver'),
         ]),
-      ],
-    },
-    {
-      id: 'sec-first-class',
-      name: 'First Class',
-      price: 100,
-      priceStatus: 'confirmed',
-      rows: [
         createRowFromGroups('F', [
-          createSeatGroup('F', 1, 11, 'sec-first-class', [4]),
-          createSeatGroup('F', 12, 11, 'sec-first-class', [16, 17]),
+          createSeatGroup('F', 1, 5, 'sec-silver'),
+          createSeatGroup('F', 6, 10, 'sec-silver'),
+          createSeatGroup('F', 16, 5, 'sec-silver'),
         ]),
         createRowFromGroups('G', [
-          createSeatGroup('G', 1, 11, 'sec-first-class', [2, 3]),
-          createSeatGroup('G', 12, 11, 'sec-first-class', [18]),
+          createSeatGroup('G', 1, 5, 'sec-silver'),
+          createSeatGroup('G', 6, 10, 'sec-silver'),
+          createSeatGroup('G', 16, 5, 'sec-silver'),
         ]),
-      ],
-    },
-    {
-      id: 'sec-second-class',
-      name: 'Second Class',
-      price: 100,
-      priceStatus: 'confirmed',
-      rows: [
         createRowFromGroups('H', [
-          createSeatGroup('H', 1, 11, 'sec-second-class'),
-          createSeatGroup('H', 12, 11, 'sec-second-class', [15, 19]),
+          createSeatGroup('H', 1, 5, 'sec-silver'),
+          createSeatGroup('H', 6, 10, 'sec-silver'),
+          createSeatGroup('H', 16, 5, 'sec-silver'),
         ]),
       ],
     },

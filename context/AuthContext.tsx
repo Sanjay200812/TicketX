@@ -23,6 +23,7 @@ export interface TicketXUserProfile {
   uid: string;
   id?: string;
   name: string;
+  displayName?: string;
   email?: string | null;
   emailVerified?: boolean;
   phoneNumber?: string | null;
@@ -35,24 +36,26 @@ export interface TicketXUserProfile {
   avatar?: string | null;
   authMethods?: string[];
   role?: 'customer' | 'venue_owner' | 'admin';
+  profileVersion?: number;
   createdAt?: string;
   updatedAt?: string;
 }
 
-// Requirement 19, 20: Single password rule — minimum 6 characters only
+// Single password rule — minimum 6 characters only
 export function validatePasswordRules(pass: string): { isValid: boolean } {
   return {
     isValid: pass.length >= 6,
   };
 }
 
-// Indian 10-digit mobile number starting with 6, 7, 8, or 9 (Requirements 7, 8)
+// Indian 10-digit mobile number starting with 6, 7, 8, or 9 (Requirements 1, 33)
+export const INDIAN_PHONE_REGEX = /^[6-9]\d{9}$/;
 export function validateIndianPhone(phone: string): boolean {
   const sanitized = phone.replace(/\D/g, '');
-  return /^[6-9]\d{9}$/.test(sanitized);
+  return INDIAN_PHONE_REGEX.test(sanitized);
 }
 
-// Requirement 1: Age Check with exact error string "Doesn't meet age requirements."
+// Age Check with minimum age 16 requirements
 export function validateMinimumAge16(dobStr: string): boolean {
   if (!dobStr) return false;
   const parts = dobStr.split('-');
@@ -108,7 +111,7 @@ interface AuthContextType {
   // Account Existence Lookup
   checkAccountRegistered: (identifier: string, type: 'email' | 'phone') => Promise<boolean>;
 
-  // Requirements 13, 14, 16, 17, 27: Post-OTP Verification Account Resolver
+  // Post-OTP Verification Account Resolver
   resolvePostOtpAccount: (params: {
     identifier: string;
     type: 'phone' | 'email';
@@ -145,6 +148,7 @@ interface AuthContextType {
   updateProfileData: (data: Partial<TicketXUserProfile>) => Promise<{ success: boolean; error?: string }>;
   uploadProfilePicture: (file: File) => Promise<{ success: boolean; url?: string; error?: string }>;
   addPhoneToCurrentProfile: (phone: string) => Promise<{ success: boolean; error?: string }>;
+  updateProfileEmail: (email: string) => Promise<{ success: boolean; error?: string }>;
   reauthenticateAndChangePassword: (oldPass: string, newPass: string) => Promise<{ success: boolean; error?: string }>;
 
   logout: () => Promise<void>;
@@ -221,7 +225,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // SINGLE main Firebase onAuthStateChanged observer
+  // SINGLE main Firebase onAuthStateChanged observer with Robust Bootstrap & Legacy Migration (Requirements 46, 47, 48, 49, 50, 51)
   useEffect(() => {
     let profileUnsub: Unsubscribe | null = null;
 
@@ -240,6 +244,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const userDocRef = doc(db, 'users', fbUser.uid);
 
+        // Check if legacy profile exists matching user email in local storage or collections
+        let legacyProfileData: Partial<TicketXUserProfile> = {};
+        if (typeof window !== 'undefined' && fbUser.email) {
+          const emailClean = fbUser.email.toLowerCase().trim();
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.includes(':profile')) {
+              try {
+                const parsed = JSON.parse(localStorage.getItem(k) || '{}');
+                if (parsed.email && parsed.email.toLowerCase().trim() === emailClean) {
+                  legacyProfileData = parsed;
+                  break;
+                }
+              } catch (e) {
+                // ignore
+              }
+            }
+          }
+        }
+
         profileUnsub = onSnapshot(
           userDocRef,
           async (docSnap) => {
@@ -249,37 +273,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 ...data,
                 uid: `firebase:${fbUser.uid}`,
                 id: fbUser.uid,
-                email: fbUser.email || data.email,
-                phone: data.phoneNumber || fbUser.phoneNumber || undefined,
-                emailVerified: fbUser.emailVerified || data.emailVerified,
+                name: data.name || fbUser.displayName || (fbUser.email ? fbUser.email.split('@')[0] : 'TicketX User'),
+                displayName: data.displayName || data.name || fbUser.displayName || 'TicketX User',
+                email: data.email || fbUser.email || null,
+                phone: data.phoneNumber || data.phone || fbUser.phoneNumber || undefined,
+                phoneNumber: data.phoneNumber || data.phone || fbUser.phoneNumber || undefined,
+                emailVerified: fbUser.emailVerified || data.emailVerified || false,
                 photoURL: data.photoURL || fbUser.photoURL || undefined,
                 avatar: data.photoURL || fbUser.photoURL || undefined,
+                gender: data.gender || 'Prefer not to say',
+                dob: data.dob || null,
+                role: data.role || 'customer',
               });
             } else {
+              // Bootstrap minimal profile using Firebase identity & legacy attributes (Requirement 48, 49)
+              const bootstrappedName =
+                legacyProfileData.name ||
+                fbUser.displayName ||
+                (fbUser.email ? fbUser.email.split('@')[0] : 'TicketX User');
+
               const initialProfileData = removeUndefined({
                 uid: `firebase:${fbUser.uid}`,
                 id: fbUser.uid,
-                name: fbUser.displayName || (fbUser.email ? fbUser.email.split('@')[0] : 'TicketX User'),
-                email: fbUser.email ?? null,
-                emailVerified: fbUser.emailVerified ?? false,
-                phoneNumber: fbUser.phoneNumber ?? null,
-                phone: fbUser.phoneNumber ?? null,
-                phoneVerified: Boolean(fbUser.phoneNumber),
-                photoURL: fbUser.photoURL ?? null,
-                avatar: fbUser.photoURL ?? null,
+                name: bootstrappedName,
+                displayName: bootstrappedName,
+                email: fbUser.email || legacyProfileData.email || null,
+                emailVerified: fbUser.emailVerified || legacyProfileData.emailVerified || false,
+                phoneNumber: fbUser.phoneNumber || legacyProfileData.phoneNumber || null,
+                phone: fbUser.phoneNumber || legacyProfileData.phone || null,
+                displayPhone: legacyProfileData.displayPhone || (fbUser.phoneNumber ? fbUser.phoneNumber : null),
+                phoneVerified: Boolean(fbUser.phoneNumber || legacyProfileData.phoneVerified),
+                gender: legacyProfileData.gender || 'Prefer not to say',
+                dob: legacyProfileData.dob || null,
+                photoURL: fbUser.photoURL || legacyProfileData.photoURL || null,
+                avatar: fbUser.photoURL || legacyProfileData.avatar || null,
                 role: 'customer',
+                profileVersion: 1,
                 authMethods: fbUser.providerData.map((p) => p.providerId),
-                createdAt: new Date().toISOString(),
+                createdAt: legacyProfileData.createdAt || new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
               });
 
-              await setDoc(userDocRef, initialProfileData, { merge: true });
+              try {
+                await setDoc(userDocRef, initialProfileData, { merge: true });
+              } catch (setErr) {
+                console.warn('Could not write profile to Firestore immediately:', setErr);
+              }
+
               setUser(initialProfileData as unknown as TicketXUserProfile);
             }
             setLoading(false);
           },
           (err) => {
             console.error('Firestore profile error:', err);
+            // Fallback: don't let error lock user out as "Not Registered"
+            const fallbackProfile: TicketXUserProfile = {
+              uid: `firebase:${fbUser.uid}`,
+              id: fbUser.uid,
+              name: fbUser.displayName || (fbUser.email ? fbUser.email.split('@')[0] : 'TicketX User'),
+              email: fbUser.email,
+              emailVerified: fbUser.emailVerified,
+              photoURL: fbUser.photoURL,
+              phoneNumber: fbUser.phoneNumber,
+              role: 'customer',
+              profileVersion: 1,
+            };
+            setUser(fallbackProfile);
             setLoading(false);
           }
         );
@@ -325,6 +384,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         displayPhone: demoSession.type === 'phone' ? `+91 ${demoSession.identifier}` : null,
         phoneVerified: demoSession.type === 'phone',
         emailVerified: demoSession.type === 'email',
+        gender: 'Prefer not to say',
         role: 'customer',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -380,7 +440,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Requirements 13, 14, 16, 17, 27: Post-OTP Verification Account Resolver
+  // Post-OTP Verification Account Resolver & Auto-Bootstrap (Requirements 3, 4, 34)
   const resolvePostOtpAccount = async ({
     identifier,
     type,
@@ -391,31 +451,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     name?: string;
   }): Promise<{ success: boolean; isNewUser?: boolean; error?: string }> => {
     const clean = identifier.trim().toLowerCase();
-    const isRegistered = await checkAccountRegistered(clean, type);
 
     if (auth.currentUser) {
       await signOut(auth);
       setFirebaseUser(null);
     }
 
-    const accountKey = type === 'phone' ? `phone:+91${clean.slice(-10)}` : `email:${clean}`;
-    const demoSession = { identifier: clean, accountKey, type };
+    const cleanDigits = type === 'phone' ? clean.replace(/\D/g, '').slice(-10) : clean;
+    const accountKey = type === 'phone' ? `phone:+91${cleanDigits}` : `email:${clean}`;
+    const demoSession = { identifier: cleanDigits, accountKey, type };
 
-    if (isRegistered) {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('ticketx_demo_session', JSON.stringify(demoSession));
-      }
-      setDemoSessionUser(demoSession);
-      loadDemoSessionUser(demoSession, name);
-      return { success: true, isNewUser: false };
-    }
-
-    if (!name) {
-      // Account does not exist, return isNewUser: true to ask for name
-      return { success: true, isNewUser: true };
-    }
-
-    // Create new account with provided name
     if (typeof window !== 'undefined') {
       localStorage.setItem('ticketx_demo_session', JSON.stringify(demoSession));
     }
@@ -436,7 +481,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const cleanPhone = data.phone.replace(/\D/g, '').slice(0, 10);
       if (!validateIndianPhone(cleanPhone)) {
-        return { success: false, error: 'Please enter a valid 10-digit number.' };
+        return { success: false, error: 'Enter a valid number' };
       }
 
       if (data.pass.length < 6) {
@@ -459,14 +504,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         uid: `firebase:${fbUser.uid}`,
         id: fbUser.uid,
         name: data.name,
+        displayName: data.name,
         email: data.email ?? null,
         emailVerified: false,
         phoneNumber: `+91${cleanPhone}`,
+        phone: `+91${cleanPhone}`,
         displayPhone: `+91 ${cleanPhone}`,
         phoneVerified: false,
         gender: data.gender ?? 'Prefer not to say',
         dob: data.dob ?? null,
         role: 'customer',
+        profileVersion: 1,
         authMethods: ['password'],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -520,7 +568,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Requirements 20, 21, 22, 23, 24: GOOGLE AUTHENTICATION AUDIT
+  // GOOGLE AUTHENTICATION
   const loginWithGoogle = async (): Promise<{ success: boolean; error?: string }> => {
     try {
       if (typeof window !== 'undefined') {
@@ -642,17 +690,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: true };
   };
 
-  // PROFILE PHONE LINKING
+  // PROFILE PHONE LINKING / UPDATING
   const addPhoneToCurrentProfile = async (phone: string): Promise<{ success: boolean; error?: string }> => {
     const cleanPhone = phone.replace(/\D/g, '').slice(0, 10);
     if (!validateIndianPhone(cleanPhone)) {
-      return { success: false, error: 'Please enter a valid 10-digit number.' };
+      return { success: false, error: 'Enter a valid number' };
     }
 
     return await updateProfileData({
       phoneNumber: `+91${cleanPhone}`,
+      phone: `+91${cleanPhone}`,
       displayPhone: `+91 ${cleanPhone}`,
       phoneVerified: true,
+    });
+  };
+
+  // PROFILE EMAIL LINKING / UPDATING (Requirement 13, 14)
+  const updateProfileEmail = async (newEmail: string): Promise<{ success: boolean; error?: string }> => {
+    const cleanEmail = newEmail.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+      return { success: false, error: 'Enter a valid email address' };
+    }
+
+    return await updateProfileData({
+      email: cleanEmail,
+      emailVerified: true,
     });
   };
 
@@ -676,12 +738,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           reader.onerror = reject;
           reader.readAsDataURL(file);
         });
+      } else {
+        photoURL = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
       }
 
       await updateProfileData({ photoURL, avatar: photoURL });
       return { success: true, url: photoURL };
     } catch (err: any) {
-      return { success: false, error: 'Image upload failed.' };
+      console.error('Photo upload error:', err);
+      // If Firebase storage fails (e.g. offline/rules), store base64 in profile
+      try {
+        const reader = new FileReader();
+        const base64Url = await new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        await updateProfileData({ photoURL: base64Url, avatar: base64Url });
+        return { success: true, url: base64Url };
+      } catch (fallbackErr) {
+        return { success: false, error: 'Image upload failed.' };
+      }
     }
   };
 
@@ -753,6 +835,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateProfileData,
         uploadProfilePicture,
         addPhoneToCurrentProfile,
+        updateProfileEmail,
         reauthenticateAndChangePassword,
         logout,
       }}

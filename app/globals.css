@@ -32,7 +32,7 @@
     --input: 0 0% 15%;
     --ring: 354 74% 49%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
   }
 }
 
@@ -40,19 +40,26 @@
   * {
     @apply border-border;
   }
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    overflow-x: hidden;
   }
 }
 
-/* Custom Utilities for cinematic feel */
+/* Custom Utilities for cinematic feel & animations */
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
   .bg-glass {
     @apply bg-black/40 backdrop-blur-md border border-white/10;
+  }
+  .bg-glass-card {
+    @apply bg-[#121216]/80 backdrop-blur-xl border border-white/10 shadow-2xl;
   }
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
@@ -61,4 +68,40 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(216, 33, 50, 0.4);
+    border-radius: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(216, 33, 50, 0.7);
+  }
+}
+
+.ticketx-page-title {
+  font-family: var(--font-serif-heading), 'Cinzel', Georgia, serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(216, 33, 50, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(216, 33, 50, 0.5);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2.5s infinite ease-in-out;
 }

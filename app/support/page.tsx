@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { HelpCircle, FileQuestion, MessageSquare, Ticket, CreditCard, ShieldCheck, MapPin, Store, ChevronRight } from 'lucide-react';
 
+import { TicketXHeading } from '@/components/shared/TicketXHeading';
+
 export default function SupportHubPage() {
   return (
     <div className="min-h-screen pt-24 pb-20 bg-background">
@@ -12,10 +14,13 @@ export default function SupportHubPage() {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 mb-4 shadow-lg">
             <HelpCircle className="w-7 h-7" />
           </div>
-          <h1 className="text-3xl md:text-5xl font-bold font-heading text-white mb-3">TicketX Help &amp; Support</h1>
-          <p className="text-gray-400 text-sm max-w-md mx-auto">
-            Need help with your ticket booking, seat reservation, or theatre enquiries? We are here 24/7.
-          </p>
+          <TicketXHeading
+            subtitle="Need help with your ticket booking, seat reservation, or theatre enquiries? We are here 24/7."
+            size="xl"
+            className="justify-center"
+          >
+            TicketX Support
+          </TicketXHeading>
         </div>
 
         {/* Support Grid Options */}

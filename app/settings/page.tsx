@@ -6,6 +6,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useLocation } from '@/context/LocationContext';
 import { Button } from '@/components/ui/button';
 
+import { TicketXHeading } from '@/components/shared/TicketXHeading';
+
 export default function SettingsPage() {
   const { user, logout } = useAuth();
   const { location, setIsCityModalOpen } = useLocation();
@@ -18,14 +20,14 @@ export default function SettingsPage() {
     <div className="min-h-screen pt-24 pb-20 bg-background">
       <div className="container mx-auto px-4 md:px-6 max-w-2xl">
         {/* Page Header */}
-        <div className="flex items-center gap-4 mb-8 pb-4 border-b border-white/10">
-          <div className="w-12 h-12 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary">
-            <SettingsIcon className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold font-heading text-white">App Settings</h1>
-            <p className="text-xs text-muted-foreground">Manage your account profile, location preferences, and help options.</p>
-          </div>
+        <div className="mb-8 pb-4 border-b border-white/10">
+          <TicketXHeading
+            subtitle="Manage your account profile, location preferences, and help options."
+            size="lg"
+            icon={<SettingsIcon className="w-7 h-7" />}
+          >
+            Settings
+          </TicketXHeading>
         </div>
 
         <div className="space-y-6">

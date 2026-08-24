@@ -87,6 +87,15 @@ export function getMoviesForLocation(locationId: string, date?: string): (Ticket
     }
   });
 
+  // Fallback: If no location-specific shows are scheduled, present the full active catalogue with local cinema availability
+  if (result.length === 0) {
+    const localTheatresCount = theatres.filter((t) => t.locationId === locationId).length;
+    return movies.map((m) => ({
+      ...m,
+      theatreCount: localTheatresCount > 0 ? localTheatresCount : 1,
+    }));
+  }
+
   return result;
 }
 

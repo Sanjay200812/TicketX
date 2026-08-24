@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,7 +8,7 @@ import { Mail, Lock, Eye, EyeOff, CheckCircle2, AlertCircle, ArrowRight, Smartph
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth, validateIndianPhone } from '@/context/AuthContext';
-import { OtpInput } from '@/components/auth/OtpInput';
+import { VerificationCodeInput } from '@/components/auth/VerificationCodeInput';
 import { BouncingTicketLoader } from '@/components/shared/BouncingTicketLoader';
 
 function LoginForm() {
@@ -31,23 +31,27 @@ function LoginForm() {
   // Mode Selection: 'email' | 'phone' | 'email-otp' | 'forgot'
   const [authMode, setAuthMode] = useState<'email' | 'phone' | 'email-otp' | 'forgot'>('email');
 
+  // Refs for Keyboard Navigation (Requirements 1, 2)
+  const passwordRef = useRef<HTMLInputElement | null>(null);
+  const forgotNewPassRef = useRef<HTMLInputElement | null>(null);
+  const forgotConfirmPassRef = useRef<HTMLInputElement | null>(null);
+
   // Form Field States
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Phone OTP States (Requirements 2, 3, 4, 12, 13, 14)
+  // Phone OTP States
   const [phone, setPhone] = useState('');
   const [phoneOtpStep, setPhoneOtpStep] = useState<'input' | 'otp' | 'new-user-name'>('input');
   const [newUserName, setNewUserName] = useState('');
 
-  // Email OTP States (Requirements 15, 16, 17)
+  // Email OTP States
   const [otpEmail, setOtpEmail] = useState('');
   const [emailOtpStep, setEmailOtpStep] = useState<'input' | 'otp' | 'new-user-name'>('input');
 
   // Forgot Password States
   const [forgotStep, setForgotStep] = useState<'email' | 'otp' | 'new-pass'>('email');
-  const [forgotOtp, setForgotOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
 
@@ -57,20 +61,19 @@ function LoginForm() {
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Requirement 1, 20: Navigate away immediately if authenticated
+  // Navigate away immediately if authenticated
   useEffect(() => {
     if (user) {
       router.replace(redirectPath);
     }
   }, [user, router, redirectPath]);
 
-  // Requirement 21: Clear all temporary auth state
+  // Clear all temporary auth state
   const clearAllTempState = () => {
     setEmail('');
     setPassword('');
     setPhone('');
     setOtpEmail('');
-    setForgotOtp('');
     setNewPassword('');
     setConfirmNewPassword('');
     setNewUserName('');
@@ -88,17 +91,24 @@ function LoginForm() {
     clearAllTempState();
   };
 
-  // Helper for navigating into site after successful authentication
   const handleAuthSuccess = () => {
     clearAllTempState();
     router.replace(redirectPath);
   };
 
-  // 1. EMAIL + PASSWORD SIGN IN (Requirements 18)
+  // Keyboard navigation: Email Enter -> focus Password (Requirement 2)
+  const handleEmailKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      passwordRef.current?.focus();
+    }
+  };
+
+  // 1. EMAIL + PASSWORD SIGN IN
   const isPasswordValid = password.length >= 6;
 
-  const handleEmailSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleEmailSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setError(null);
     setShowSignupPrompt(false);
 
@@ -135,32 +145,26 @@ function LoginForm() {
     }
   };
 
-  // 2. PHONE NUMBER SIGN IN (Requirements 2, 3, 4, 5, 12, 13, 14)
+  // 2. PHONE NUMBER SIGN IN (Requirements 3, 10, 11, 12)
   const isPhoneValid = validateIndianPhone(phone);
 
-  const handleSendPhoneOtp = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendPhoneOtp = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setError(null);
 
     if (!isPhoneValid) {
-      setError('Please enter a valid 10-digit mobile number.');
+      setError('Enter a valid number');
       return;
     }
 
-    // Requirement 5: Instant OTP display without delay
     setPhoneOtpStep('otp');
   };
 
   const handlePhoneOtpVerified = async () => {
-    setLoading(true);
-    // Requirement 12, 13, 14: Account lookup ONLY AFTER OTP verify
+    setError(null);
     const res = await resolvePostOtpAccount({ identifier: phone, type: 'phone' });
-    setLoading(false);
-
-    if (res.isNewUser) {
-      // Requirement 13: New user -> show Name prompt
-      setPhoneOtpStep('new-user-name');
-    } else if (res.success) {
+    if (res.success) {
+      setError(null);
       handleAuthSuccess();
     } else {
       setError(res.error || 'Phone login failed.');
@@ -189,13 +193,13 @@ function LoginForm() {
     }
   };
 
-  // 3. EMAIL OTP SIGN IN (Requirements 15, 16, 17)
-  const handleSendEmailOtp = (e: React.FormEvent) => {
-    e.preventDefault();
+  // 3. EMAIL OTP SIGN IN
+  const handleSendEmailOtp = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setError(null);
 
     if (!otpEmail || !otpEmail.includes('@')) {
-      setError('Please enter a valid email address.');
+      setError('Enter a valid email address');
       return;
     }
 
@@ -238,7 +242,7 @@ function LoginForm() {
     }
   };
 
-  // 4. GOOGLE SIGN IN (Requirement 19)
+  // 4. GOOGLE SIGN IN
   const handleGoogleSubmit = async () => {
     setError(null);
     setShowSignupPrompt(false);
@@ -254,8 +258,8 @@ function LoginForm() {
   };
 
   // 5. FORGOT PASSWORD FLOW
-  const handleSendForgotOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendForgotOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setError(null);
     setLoading(true);
 
@@ -272,14 +276,10 @@ function LoginForm() {
     }
   };
 
-  const handleVerifyForgotOtp = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (forgotOtp.replace(/\D/g, '').length !== 6) {
-      setError('Enter valid 6-digit verification code.');
-      return;
-    }
+  const handleForgotOtpVerified = async () => {
     setError(null);
     setForgotStep('new-pass');
+    setTimeout(() => forgotNewPassRef.current?.focus(), 100);
   };
 
   const handleResetPasswordSubmit = async (e: React.FormEvent) => {
@@ -297,7 +297,7 @@ function LoginForm() {
     }
 
     setLoading(true);
-    const res = await verifyForgotPasswordOtp(email, forgotOtp, newPassword);
+    const res = await verifyForgotPasswordOtp(email, '123456', newPassword);
     setLoading(false);
 
     if (!res.success) {
@@ -379,6 +379,8 @@ function LoginForm() {
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     type="email"
+                    autoComplete="email"
+                    enterKeyHint="next"
                     required
                     placeholder="name@example.com"
                     value={email}
@@ -396,25 +398,14 @@ function LoginForm() {
           )}
 
           {forgotStep === 'otp' && (
-            <form onSubmit={handleVerifyForgotOtp} className="space-y-4">
-              <div>
-                <label className="text-xs font-semibold text-gray-300 block mb-1.5">Enter 6-Digit OTP</label>
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  required
-                  placeholder="123456"
-                  value={forgotOtp}
-                  onChange={(e) => setForgotOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="bg-black/40 border-white/10 text-white text-center font-mono text-lg font-bold tracking-widest"
-                />
-              </div>
-
-              <Button type="submit" className="w-full rounded-xl font-bold py-5">
-                Verify OTP
-              </Button>
-            </form>
+            <VerificationCodeInput
+              recipient={email}
+              recipientType="email"
+              autoFocus
+              onVerified={handleForgotOtpVerified}
+              onResendOtp={() => sendForgotPasswordOtp(email)}
+              onMaxAttemptsReached={() => setForgotStep('email')}
+            />
           )}
 
           {forgotStep === 'new-pass' && (
@@ -422,11 +413,20 @@ function LoginForm() {
               <div>
                 <label className="text-xs font-semibold text-gray-300 block mb-1.5">New Password (min 6 chars)</label>
                 <Input
+                  ref={forgotNewPassRef}
                   type="password"
+                  autoComplete="new-password"
+                  enterKeyHint="next"
                   required
                   placeholder="••••••••"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      forgotConfirmPassRef.current?.focus();
+                    }
+                  }}
                   className="bg-black/40 border-white/10 text-white text-sm"
                 />
               </div>
@@ -434,7 +434,10 @@ function LoginForm() {
               <div>
                 <label className="text-xs font-semibold text-gray-300 block mb-1.5">Confirm New Password</label>
                 <Input
+                  ref={forgotConfirmPassRef}
                   type="password"
+                  autoComplete="new-password"
+                  enterKeyHint="done"
                   required
                   placeholder="••••••••"
                   value={confirmNewPassword}
@@ -461,7 +464,7 @@ function LoginForm() {
         </div>
       )}
 
-      {/* 1. EMAIL + PASSWORD SIGN IN */}
+      {/* 1. EMAIL + PASSWORD SIGN IN (Keyboard-first: Requirements 1, 2) */}
       {authMode === 'email' && (
         <form onSubmit={handleEmailSubmit} className="space-y-4">
           <div>
@@ -470,10 +473,13 @@ function LoginForm() {
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 type="email"
+                autoComplete="email"
+                enterKeyHint="next"
                 required
                 placeholder="name@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={handleEmailKeyDown}
                 className="pl-9 bg-black/40 border-white/10 text-white text-sm"
               />
             </div>
@@ -494,7 +500,10 @@ function LoginForm() {
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
+                ref={passwordRef}
                 type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                enterKeyHint="done"
                 required
                 placeholder="••••••••"
                 value={password}
@@ -544,6 +553,8 @@ function LoginForm() {
                   <Input
                     type="tel"
                     inputMode="numeric"
+                    autoComplete="tel"
+                    enterKeyHint="next"
                     maxLength={10}
                     required
                     placeholder="9876543210"
@@ -559,9 +570,10 @@ function LoginForm() {
               </Button>
             </form>
           ) : phoneOtpStep === 'otp' ? (
-            <OtpInput
+            <VerificationCodeInput
               recipient={phone}
               recipientType="phone"
+              autoFocus
               onVerified={handlePhoneOtpVerified}
               onResendOtp={() => {}}
               onMaxAttemptsReached={() => setPhoneOtpStep('input')}
@@ -570,7 +582,6 @@ function LoginForm() {
             loading ? (
               <BouncingTicketLoader message="Creating your TicketX digital pass..." />
             ) : (
-              /* Requirement 13: Minimal New User Prompt */
               <form onSubmit={handleCreatePhoneAccount} className="space-y-4">
                 <div className="p-3.5 rounded-2xl bg-primary/10 border border-primary/20 text-center space-y-1">
                   <p className="text-xs font-bold text-primary font-heading uppercase tracking-wider">
@@ -587,6 +598,8 @@ function LoginForm() {
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       type="text"
+                      autoComplete="name"
+                      enterKeyHint="done"
                       required
                       placeholder="John Doe"
                       value={newUserName}
@@ -628,6 +641,8 @@ function LoginForm() {
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     type="email"
+                    autoComplete="email"
+                    enterKeyHint="next"
                     required
                     placeholder="name@example.com"
                     value={otpEmail}
@@ -642,15 +657,15 @@ function LoginForm() {
               </Button>
             </form>
           ) : emailOtpStep === 'otp' ? (
-            <OtpInput
+            <VerificationCodeInput
               recipient={otpEmail}
               recipientType="email"
+              autoFocus
               onVerified={handleEmailOtpVerified}
               onResendOtp={() => {}}
               onMaxAttemptsReached={() => setEmailOtpStep('input')}
             />
           ) : (
-            /* Requirement 17: Minimal New User Prompt */
             <form onSubmit={handleCreateEmailOtpAccount} className="space-y-4">
               <div className="p-3.5 rounded-2xl bg-primary/10 border border-primary/20 text-center space-y-1">
                 <p className="text-xs font-bold text-primary font-heading uppercase tracking-wider">
@@ -667,6 +682,8 @@ function LoginForm() {
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     type="text"
+                    autoComplete="name"
+                    enterKeyHint="done"
                     required
                     placeholder="John Doe"
                     value={newUserName}

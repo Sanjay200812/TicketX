@@ -7,6 +7,7 @@ import { MessageSquare, Mail, User, Phone, Tag, Hash, FileText, Send, CheckCircl
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { TicketXHeading } from '@/components/shared/TicketXHeading';
 
 const CATEGORIES = [
   'Booking Support',
@@ -98,15 +99,13 @@ export default function ContactUsPage() {
 
         {/* Page Header */}
         <div className="mb-8 pb-6 border-b border-white/10">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-2xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary">
-              <MessageSquare className="w-5 h-5" />
-            </div>
-            <h1 className="text-2xl md:text-3xl font-bold font-heading text-white">Contact TicketX</h1>
-          </div>
-          <p className="text-xs md:text-sm text-muted-foreground mt-1">
-            Need help with a booking, payment, theatre, event or your TicketX account? Send us a message.
-          </p>
+          <TicketXHeading
+            subtitle="Need help with a booking, payment, theatre, event or your TicketX account? Send us a message."
+            size="lg"
+            icon={<MessageSquare className="w-7 h-7" />}
+          >
+            Contact Us
+          </TicketXHeading>
         </div>
 
         {submitted ? (

@@ -1,8 +1,19 @@
+"use client";
+
 import Link from 'next/link';
+import { useSidebar } from '@/context/SidebarContext';
+import { cn } from '@/lib/utils';
 
 export function Footer() {
+  const { isDesktopExpanded } = useSidebar();
+
   return (
-    <footer className="bg-[#080808] border-t border-white/5 py-12 md:py-16">
+    <footer
+      className={cn(
+        'bg-[#080808] border-t border-white/5 py-12 md:py-16 transition-all duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)]',
+        isDesktopExpanded ? 'lg:pl-[260px]' : 'lg:pl-[68px]'
+      )}
+    >
       <div className="container mx-auto px-4 md:px-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           <div className="col-span-1 md:col-span-1">

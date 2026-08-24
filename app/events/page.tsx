@@ -9,6 +9,8 @@ import { events as allEvents } from '@/data/events';
 import { getLocationById } from '@/lib/data';
 import { Input } from '@/components/ui/input';
 
+import { TicketXHeading } from '@/components/shared/TicketXHeading';
+
 export default function EventsPage() {
   const { location, selectedLocation, selectLocation } = useLocation();
   const [selectedFilterCity, setSelectedFilterCity] = useState<string>('current'); // 'current' or specific cityId
@@ -37,15 +39,13 @@ export default function EventsPage() {
     <div className="pt-24 pb-20 min-h-screen bg-background">
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl md:text-5xl font-bold font-heading">
-              Events in {location.city.name}
-            </h1>
-            <p className="text-muted-foreground text-sm mt-1 flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-primary" />
-              Live stage concerts, college freshers & auditorium events
-            </p>
-          </div>
+          <TicketXHeading
+            subtitle="Live stage concerts, college freshers & auditorium events."
+            size="lg"
+            icon={<Sparkles className="w-7 h-7" />}
+          >
+            Events in {location.city.name}
+          </TicketXHeading>
         </div>
 
         {/* LOCATION FILTER TABS & SEARCH */}

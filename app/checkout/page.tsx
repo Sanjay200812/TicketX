@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { BookingSummary } from '@/components/checkout/BookingSummary';
 import { RazorpayPayment } from '@/components/checkout/RazorpayPayment';
 import { BookingProgress } from '@/components/booking/BookingProgress';
+import { TicketXHeading } from '@/components/shared/TicketXHeading';
 import { saveBookingForUser } from '@/lib/storage';
 import { Booking } from '@/types/booking';
 import { Movie } from '@/types/movie';
@@ -125,7 +126,7 @@ export default function CheckoutPage() {
 
         <div className="max-w-5xl mx-auto mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold font-heading">Review &amp; Pay</h1>
+            <TicketXHeading size="lg">Review &amp; Pay</TicketXHeading>
             <div className="flex items-center gap-2 mt-2">
               <span className="text-xs text-muted-foreground font-medium">Seats reserved for:</span>
               <span className={`px-3 py-1 rounded-full border text-xs font-mono font-bold flex items-center gap-1.5 ${

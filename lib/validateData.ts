@@ -2,7 +2,7 @@ import { locations } from '../data/locations';
 import { movies } from '../data/movies';
 import { theatres } from '../data/theatres';
 import { shows } from '../data/shows';
-import { seatLayouts } from '../data/seatLayouts';
+import { seatLayoutsList } from '../data/seatLayouts';
 import { TicketXSeatLayout } from '../types/seatLayouts';
 
 export function calculateUsableCapacity(layout: TicketXSeatLayout): number {
@@ -10,10 +10,16 @@ export function calculateUsableCapacity(layout: TicketXSeatLayout): number {
     return (
       total +
       section.rows.reduce((rowTotal, rowGroup) => {
-        const leftCount = (rowGroup.leftSeats || []).filter((s) => s.status !== 'blocked').length;
-        const centerCount = (rowGroup.centerSeats || []).filter((s) => s.status !== 'blocked').length;
-        const rightCount = (rowGroup.rightSeats || []).filter((s) => s.status !== 'blocked').length;
-        const normalCount = (rowGroup.seats || []).filter((s) => s.status !== 'blocked').length;
+        if (rowGroup.groups && rowGroup.groups.length > 0) {
+          const groupCount = rowGroup.groups.reduce((gTotal, grp) => {
+            return gTotal + grp.seats.length;
+          }, 0);
+          return rowTotal + groupCount;
+        }
+        const leftCount = (rowGroup.leftSeats || []).length;
+        const centerCount = (rowGroup.centerSeats || []).length;
+        const rightCount = (rowGroup.rightSeats || []).length;
+        const normalCount = (rowGroup.seats || []).length;
         return rowTotal + leftCount + centerCount + rightCount + normalCount;
       }, 0)
     );
@@ -66,8 +72,8 @@ export function validateTicketXData(): { valid: boolean; errors: string[] } {
     }
   });
 
-  // Check seatLayouts validity & capacity matching
-  seatLayouts.forEach((sl) => {
+  // Check seatLayouts validity, >= 150 capacity, and exact capacity matching (Requirements 39-43)
+  seatLayoutsList.forEach((sl) => {
     if (!theatreIds.has(sl.theatreId)) {
       errors.push(`SeatLayout ${sl.id} references invalid theatreId: ${sl.theatreId}`);
     }
@@ -76,9 +82,18 @@ export function validateTicketXData(): { valid: boolean; errors: string[] } {
     }
 
     const calculatedCapacity = calculateUsableCapacity(sl);
-    if (calculatedCapacity !== sl.verifiedCapacity) {
+
+    // Requirement 39: 150+ real seats
+    if (calculatedCapacity < 150) {
       errors.push(
-        `Capacity Mismatch for ${sl.theatreName} (${sl.id}): Expected verified capacity ${sl.verifiedCapacity}, but rendered usable capacity is ${calculatedCapacity}`
+        `Capacity Below 150 for ${sl.theatreName} (${sl.id}): Count is ${calculatedCapacity}, required >= 150`
+      );
+    }
+
+    // Requirement 40, 42: Exact capacity match
+    if (calculatedCapacity !== sl.capacity) {
+      errors.push(
+        `Capacity Mismatch for ${sl.theatreName} (${sl.id}): Configured capacity ${sl.capacity}, but generated seat objects count is ${calculatedCapacity}`
       );
     }
   });

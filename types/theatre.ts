@@ -1,5 +1,6 @@
 export interface TicketXTheatre {
   id: string;
+  slug?: string;
   name: string;
   locationId: string;
   area?: string;

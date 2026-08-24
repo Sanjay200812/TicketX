@@ -6,6 +6,8 @@ import { useFavorites } from '@/context/FavoritesContext';
 import { MovieCard } from '@/components/movies/MovieCard';
 import { Button } from '@/components/ui/button';
 
+import { TicketXHeading } from '@/components/shared/TicketXHeading';
+
 export default function FavoritesPage() {
   const { favoriteMovies } = useFavorites();
 
@@ -17,17 +19,13 @@ export default function FavoritesPage() {
             <Link href="/" className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-white mb-3">
               <ArrowLeft className="w-3.5 h-3.5" /> Back to Movies
             </Link>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-rose-600/20 border border-rose-500/30 flex items-center justify-center text-rose-500 shadow-[0_0_15px_rgba(225,29,72,0.3)]">
-                <Heart className="w-5 h-5 fill-rose-500" />
-              </div>
-              <div>
-                <h1 className="text-2xl md:text-4xl font-extrabold font-heading text-white">My Favorites</h1>
-                <p className="text-xs md:text-sm text-muted-foreground">
-                  Your saved collection of upcoming blockbusters and favorite shows.
-                </p>
-              </div>
-            </div>
+            <TicketXHeading
+              subtitle="Your saved collection of upcoming blockbusters and favorite shows."
+              size="lg"
+              icon={<Heart className="w-7 h-7 fill-primary text-primary" />}
+            >
+              Saved Movies
+            </TicketXHeading>
           </div>
           <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-secondary border border-white/10 text-emerald-400 self-start md:self-auto">
             {favoriteMovies.length} {favoriteMovies.length === 1 ? 'Movie Saved' : 'Movies Saved'}
