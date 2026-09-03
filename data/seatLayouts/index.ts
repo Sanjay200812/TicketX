@@ -13,6 +13,7 @@ import { geethaMultiplexLayout } from './geethaMultiplex';
 import { eswarMahalLayout } from './eswarMahal';
 import { vijethaLayout } from './vijetha';
 import { lakshmiNarasimhaLayout } from './lakshmiNarasimha';
+import { saradambhaLayout, sharadambaLayout } from './saradambha';
 import { createSeatGroup, createRowFromGroups } from './builder';
 
 export const seatLayoutsList: TicketXSeatLayout[] = [
@@ -30,6 +31,7 @@ export const seatLayoutsList: TicketXSeatLayout[] = [
   eswarMahalLayout,
   vijethaLayout,
   lakshmiNarasimhaLayout,
+  saradambhaLayout,
 ];
 
 export const seatLayoutsMap: Record<string, TicketXSeatLayout> = {
@@ -44,9 +46,17 @@ export const seatLayoutsMap: Record<string, TicketXSeatLayout> = {
   [jleLayout.theatreId]: jleLayout,
   [gsCinemasLayout.theatreId]: gsCinemasLayout,
   [geethaMultiplexLayout.theatreId]: geethaMultiplexLayout,
+  'geetha-multiplex-nrt': geethaMultiplexLayout,
   [eswarMahalLayout.theatreId]: eswarMahalLayout,
+  'eswar-mahal-nrt': eswarMahalLayout,
   [vijethaLayout.theatreId]: vijethaLayout,
+  'vijetha-deluxe-nrt': vijethaLayout,
   [lakshmiNarasimhaLayout.theatreId]: lakshmiNarasimhaLayout,
+  [saradambhaLayout.theatreId]: saradambhaLayout,
+  'saradamba-theatre': saradambhaLayout,
+  'saradamba-nrt': saradambhaLayout,
+  [sharadambaLayout.theatreId]: sharadambaLayout,
+  'sharadamba-nrt': sharadambaLayout,
 };
 
 export function getSeatLayoutForTheatre(theatreId: string): TicketXSeatLayout {

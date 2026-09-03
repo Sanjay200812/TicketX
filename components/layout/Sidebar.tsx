@@ -71,7 +71,6 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
     title: 'ACCOUNT',
     items: [
       { id: 'bookings', label: 'My Bookings', href: '/my-bookings', icon: Ticket },
-      { id: 'profile', label: 'Profile', href: '/profile', icon: User },
       { id: 'settings', label: 'Settings', href: '/settings', icon: Settings },
     ],
   },
@@ -120,10 +119,10 @@ export function Sidebar({ onOpenSearchModal }: SidebarProps) {
     const isExpanded = isMobile || isDesktopExpanded;
 
     return (
-      <div className="flex flex-col h-full justify-between select-none">
-        <div>
+      <div className="flex flex-col h-full select-none justify-between">
+        <div className="flex flex-col flex-1 min-h-0">
           {/* HEADER: In collapsed mode, render ONLY ☰ centered. In expanded mode, render ☰ + TICKETX */}
-          <div className="flex items-center justify-between pb-3.5 border-b border-white/10 mb-3 relative min-h-[44px]">
+          <div className="flex items-center justify-between pb-3.5 border-b border-white/10 mb-3 relative min-h-[44px] shrink-0">
             {isExpanded ? (
               <div className="flex items-center gap-3">
                 <button
@@ -173,7 +172,7 @@ export function Sidebar({ onOpenSearchModal }: SidebarProps) {
           </div>
 
           {/* NAVIGATION SECTIONS */}
-          <div className="space-y-4 overflow-y-auto max-h-[calc(100vh-170px)] hide-scrollbar pr-0.5">
+          <div className="space-y-3.5 overflow-y-auto flex-1 hide-scrollbar pr-0.5">
             {SIDEBAR_SECTIONS.map((section) => (
               <div key={section.title} className="space-y-1">
                 {/* Section Title in Expanded Mode */}

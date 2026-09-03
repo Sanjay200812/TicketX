@@ -58,6 +58,8 @@ export async function POST(request: NextRequest) {
       id: bookingId,
       movieId: bookingDetails?.movieId,
       movieTitle: bookingDetails?.movieTitle,
+      moviePoster: bookingDetails?.moviePoster,
+      movieLanguage: bookingDetails?.movieLanguage || "Telugu",
       theatre: bookingDetails?.theatreName,
       screen: bookingDetails?.screenName || "Screen 1",
       date: bookingDetails?.date,

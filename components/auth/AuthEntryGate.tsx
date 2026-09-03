@@ -63,7 +63,19 @@ export function AuthEntryGate({ onExplore }: AuthEntryGateProps) {
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
           <span>Instant booking • Digital tickets • Zero spam</span>
         </div>
+
+        {/* Subtle Admin Login Link at bottom */}
+        <div className="pt-2 border-t border-white/5">
+          <button
+            type="button"
+            onClick={() => router.push('/admin-login')}
+            className="text-[11px] text-gray-500 hover:text-primary transition-colors font-mono tracking-wide"
+          >
+            Admin Login
+          </button>
+        </div>
       </div>
     </motion.div>
+
   );
 }

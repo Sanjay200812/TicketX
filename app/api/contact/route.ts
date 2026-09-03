@@ -6,9 +6,9 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { name, email, phone, category, booking_id, subject, message, user_id } = body;
 
-    if (!name || !email || !category || !subject || !message) {
+    if (!name || !category || !subject || !message) {
       return NextResponse.json(
-        { success: false, error: 'Please fill in all required fields (Name, Email, Category, Subject, Message).' },
+        { success: false, error: 'Please fill in all required fields (Name, Category, Subject, Message).' },
         { status: 400 }
       );
     }
@@ -16,8 +16,9 @@ export async function POST(request: Request) {
     const submission = saveContactSubmission({
       user_id: user_id || undefined,
       name,
-      email,
+      email: email || '',
       phone: phone || undefined,
+
       category,
       booking_id: booking_id || undefined,
       subject,

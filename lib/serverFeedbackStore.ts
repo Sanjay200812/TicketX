@@ -54,3 +54,10 @@ export function saveFeedback(params: Omit<FeedbackRecord, 'id' | 'createdAt'>): 
   saveFeedbackDB(memoryFeedbackDB);
   return record;
 }
+
+export function getFeedbackRecords(): FeedbackRecord[] {
+  return [...memoryFeedbackDB.records].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+

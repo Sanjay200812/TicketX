@@ -66,9 +66,10 @@ export function UserMenu() {
                 )}
               </div>
               <div className="truncate">
-                <p className="font-bold text-white text-sm truncate">{user.name || 'TicketX User'}</p>
-                <p className="text-[11px] text-muted-foreground truncate">{user.email || user.displayPhone || user.phone}</p>
+                <p className="font-bold text-white text-sm truncate">{user.name || 'TicketX Customer'}</p>
+                <p className="text-[11px] text-muted-foreground font-mono truncate">{user.displayPhone || user.phoneNumber || user.phone || 'Verified Customer'}</p>
               </div>
+
             </div>
 
             {/* Menu Links */}

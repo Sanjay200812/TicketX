@@ -7,7 +7,7 @@ import { ChevronLeft, AlertCircle, Clock, ArrowRight } from 'lucide-react';
 import { movies } from '@/data/movies';
 import { shows } from '@/data/shows';
 import { theatres } from '@/data/theatres';
-import { seatLayouts } from '@/data/seatLayouts';
+import { seatLayouts, seatLayoutsMap } from '@/data/seatLayouts';
 import { Seat } from '@/types/seat';
 import { TheatreSeatMap } from '@/components/booking/TheatreSeatMap';
 import { BookingBar, MAX_SEATS_PER_BOOKING } from '@/components/booking/BookingBar';
@@ -41,14 +41,16 @@ export default function BookingPage({ params }: { params: { showId: string } }) 
   const [remainingHoldSecs, setRemainingHoldSecs] = useState<number>(0);
 
   useEffect(() => {
-    const s = shows.find((sh) => sh.id === params.showId) || shows[0];
+    const s = shows.find((sh) => sh.id === params.showId);
     if (s) {
       const m = movies.find((mv) => mv.id === s.movieId) || null;
       const t = theatres.find((th) => th.id === s.theatreId) || null;
+      // Strict layout matching without generic fallback
       const l =
-        seatLayouts.find((sl) => sl.id === s.seatLayoutId) ||
+        seatLayoutsMap[s.theatreId] ||
         seatLayouts.find((sl) => sl.theatreId === s.theatreId) ||
-        seatLayouts[0];
+        seatLayouts.find((sl) => sl.id === s.seatLayoutId) ||
+        null;
 
       setShow(s);
       setMovie(m);
@@ -74,6 +76,11 @@ export default function BookingPage({ params }: { params: { showId: string } }) 
       } else {
         setLayout(l);
       }
+    } else {
+      setShow(null);
+      setMovie(null);
+      setTheatre(null);
+      setLayout(null);
     }
   }, [params.showId]);
 
@@ -127,44 +134,35 @@ export default function BookingPage({ params }: { params: { showId: string } }) 
   };
 
   const handleProceed = async () => {
-    if (selectedSeats.length === 0 || reserving) return;
-
-    if (!user) {
-      router.push(`/login?redirect=${encodeURIComponent(`/booking/${params.showId}`)}`);
-      return;
-    }
-
-    setHoldError(null);
+    if (selectedSeats.length === 0 || !show || !movie || !theatre) return;
     setReserving(true);
+    setHoldError(null);
 
     try {
-      const seatCodes = selectedSeats.map((s) => s.id);
-      const res = await fetch('/api/seats/hold', {
+      const holdRes = await fetch('/api/seats/hold', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          showId: params.showId,
-          seatCodes,
-          userId: user.id,
+          showId: show.id,
+          seatIds: selectedSeats.map((s) => s.id),
+          userId: user?.uid || user?.id || `anon-${Date.now()}`,
         }),
       });
 
-      const data = await res.json();
-      setReserving(false);
+      const holdData = await holdRes.json();
 
-      if (!res.ok || !data.success) {
-        setHoldError(data.error || 'This seat was just reserved by another customer. Please select another seat.');
-        setSelectedSeats([]); // clear unavailable selection
+      if (!holdRes.ok || !holdData.success) {
+        setHoldError(holdData.error || 'Selected seats were just taken. Please select different seats.');
+        setReserving(false);
         return;
       }
 
-      // Store hold context for checkout
       if (typeof window !== 'undefined') {
         sessionStorage.setItem(
           'ticketx_checkout',
           JSON.stringify({
-            holdId: data.holdId,
-            expiresAt: data.expiresAt,
+            holdId: holdData.holdId,
+            expiresAt: holdData.expiresAt,
             show,
             movie,
             theatre,
@@ -209,8 +207,27 @@ export default function BookingPage({ params }: { params: { showId: string } }) 
 
   if (!show || !movie || !theatre) {
     return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center px-4 pt-24">
+        <h2 className="text-2xl font-bold mb-2 font-heading text-white">Show Not Found</h2>
+        <p className="text-sm text-muted-foreground mb-6">The requested show could not be found.</p>
+        <Link href="/movies" className="px-6 py-2.5 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary/90">
+          Browse Movies
+        </Link>
+      </div>
+    );
+  }
+
+  if (!layout) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center px-4 pt-24">
+        <AlertCircle className="w-12 h-12 text-destructive mb-3 opacity-80" />
+        <h2 className="text-2xl font-bold mb-2 font-heading text-white">Layout Unavailable</h2>
+        <p className="text-sm text-muted-foreground max-w-md mb-6">
+          Seating layout is currently unavailable for {theatre.name}. Please select another theatre.
+        </p>
+        <Link href="/theatres" className="px-6 py-2.5 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary/90">
+          Back to Theatres
+        </Link>
       </div>
     );
   }
@@ -319,6 +336,7 @@ export default function BookingPage({ params }: { params: { showId: string } }) 
         <BookingBar
           selectedSeats={selectedSeats}
           onProceed={handleProceed}
+          loading={reserving}
         />
       )}
     </div>

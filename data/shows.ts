@@ -8,6 +8,8 @@ export function createShows({
   date,
   times,
   screenName,
+  language,
+  format,
 }: {
   locationId: string;
   theatreId: string;
@@ -15,10 +17,12 @@ export function createShows({
   date: string;
   times: string[];
   screenName?: string;
+  language?: string;
+  format?: string;
 }): TicketXShow[] {
   const seatLayoutId = `layout-${theatreId}`;
   return times.map((time, index) => ({
-    id: `${locationId}-${theatreId}-${movieId}-${date}-${index}`,
+    id: `${locationId}-${theatreId}-${movieId}-${date}-${language ? language.toLowerCase() + '-' : ''}${index}`,
     locationId,
     theatreId,
     movieId,
@@ -26,6 +30,8 @@ export function createShows({
     time,
     screenName,
     seatLayoutId,
+    language,
+    format: format || '2D',
   }));
 }
 
@@ -344,21 +350,102 @@ export const shows: TicketXShow[] = [
     times: ["02:50 PM"]
   }),
 
+  // ==========================================
+  // TOXIC SHOWS — ALL 10 GUNTUR THEATRES (Requirement 18, 19, 23)
+  // ==========================================
+  // Plateno Cinemas
+  ...createShows({ locationId: "guntur", theatreId: "plateno-cinemas", movieId: "toxic", date: TODAY_DATE, times: ["11:15 AM", "02:30 PM", "06:15 PM", "09:45 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "guntur", theatreId: "plateno-cinemas", movieId: "toxic", date: TODAY_DATE, times: ["01:30 PM", "07:30 PM"], language: "Kannada" }),
+  ...createShows({ locationId: "guntur", theatreId: "plateno-cinemas", movieId: "toxic", date: TODAY_DATE, times: ["04:45 PM", "10:30 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "guntur", theatreId: "plateno-cinemas", movieId: "toxic", date: TOMORROW_DATE, times: ["11:15 AM", "02:30 PM", "06:15 PM", "09:45 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "guntur", theatreId: "plateno-cinemas", movieId: "toxic", date: TOMORROW_DATE, times: ["01:30 PM", "07:30 PM"], language: "Kannada" }),
+  ...createShows({ locationId: "guntur", theatreId: "plateno-cinemas", movieId: "toxic", date: TOMORROW_DATE, times: ["04:45 PM", "10:30 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "guntur", theatreId: "plateno-cinemas", movieId: "toxic", date: NEXT_DAY_DATE, times: ["02:30 PM", "06:15 PM", "09:45 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "guntur", theatreId: "plateno-cinemas", movieId: "toxic", date: NEXT_DAY_DATE, times: ["01:30 PM"], language: "Kannada" }),
+  ...createShows({ locationId: "guntur", theatreId: "plateno-cinemas", movieId: "toxic", date: NEXT_DAY_DATE, times: ["04:45 PM"], language: "Hindi" }),
+
+  // Pallavi Keerthana Complex
+  ...createShows({ locationId: "guntur", theatreId: "pallavi-keerthana-complex", movieId: "toxic", date: TODAY_DATE, times: ["02:30 PM", "06:30 PM", "09:45 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "guntur", theatreId: "pallavi-keerthana-complex", movieId: "toxic", date: TODAY_DATE, times: ["11:30 AM", "05:15 PM"], language: "Kannada" }),
+  ...createShows({ locationId: "guntur", theatreId: "pallavi-keerthana-complex", movieId: "toxic", date: TODAY_DATE, times: ["03:45 PM", "10:15 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "guntur", theatreId: "pallavi-keerthana-complex", movieId: "toxic", date: TOMORROW_DATE, times: ["02:30 PM", "06:30 PM", "09:45 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "guntur", theatreId: "pallavi-keerthana-complex", movieId: "toxic", date: TOMORROW_DATE, times: ["11:30 AM", "05:15 PM"], language: "Kannada" }),
+  ...createShows({ locationId: "guntur", theatreId: "pallavi-keerthana-complex", movieId: "toxic", date: TOMORROW_DATE, times: ["03:45 PM", "10:15 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "guntur", theatreId: "pallavi-keerthana-complex", movieId: "toxic", date: NEXT_DAY_DATE, times: ["02:30 PM", "06:30 PM", "09:45 PM"], language: "Telugu" }),
+
+  // Sri Saraswathi Picture Palace
+  ...createShows({ locationId: "guntur", theatreId: "sri-saraswathi-picture-palace", movieId: "toxic", date: TODAY_DATE, times: ["02:45 PM", "06:30 PM", "09:45 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "guntur", theatreId: "sri-saraswathi-picture-palace", movieId: "toxic", date: TODAY_DATE, times: ["11:45 AM"], language: "Kannada" }),
+  ...createShows({ locationId: "guntur", theatreId: "sri-saraswathi-picture-palace", movieId: "toxic", date: TODAY_DATE, times: ["04:30 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "guntur", theatreId: "sri-saraswathi-picture-palace", movieId: "toxic", date: TOMORROW_DATE, times: ["02:45 PM", "06:30 PM", "09:45 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "guntur", theatreId: "sri-saraswathi-picture-palace", movieId: "toxic", date: TOMORROW_DATE, times: ["11:45 AM"], language: "Kannada" }),
+  ...createShows({ locationId: "guntur", theatreId: "sri-saraswathi-picture-palace", movieId: "toxic", date: TOMORROW_DATE, times: ["04:30 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "guntur", theatreId: "sri-saraswathi-picture-palace", movieId: "toxic", date: NEXT_DAY_DATE, times: ["02:45 PM", "06:30 PM", "09:45 PM"], language: "Telugu" }),
+
+  // Mythri Cinemas
+  ...createShows({ locationId: "guntur", theatreId: "mythri-cinemas", movieId: "toxic", date: TODAY_DATE, times: ["11:00 AM", "02:15 PM", "06:00 PM", "09:30 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "guntur", theatreId: "mythri-cinemas", movieId: "toxic", date: TODAY_DATE, times: ["01:15 PM", "07:15 PM"], language: "Kannada" }),
+  ...createShows({ locationId: "guntur", theatreId: "mythri-cinemas", movieId: "toxic", date: TODAY_DATE, times: ["04:15 PM", "10:15 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "guntur", theatreId: "mythri-cinemas", movieId: "toxic", date: TOMORROW_DATE, times: ["11:00 AM", "02:15 PM", "06:00 PM", "09:30 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "guntur", theatreId: "mythri-cinemas", movieId: "toxic", date: TOMORROW_DATE, times: ["01:15 PM", "07:15 PM"], language: "Kannada" }),
+  ...createShows({ locationId: "guntur", theatreId: "mythri-cinemas", movieId: "toxic", date: TOMORROW_DATE, times: ["04:15 PM", "10:15 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "guntur", theatreId: "mythri-cinemas", movieId: "toxic", date: NEXT_DAY_DATE, times: ["11:00 AM", "02:15 PM", "06:00 PM", "09:30 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "guntur", theatreId: "mythri-cinemas", movieId: "toxic", date: NEXT_DAY_DATE, times: ["01:15 PM"], language: "Kannada" }),
+  ...createShows({ locationId: "guntur", theatreId: "mythri-cinemas", movieId: "toxic", date: NEXT_DAY_DATE, times: ["04:15 PM"], language: "Hindi" }),
+
+  // Cine Prime Cinema
+  ...createShows({ locationId: "guntur", theatreId: "cine-prime-cinema", movieId: "toxic", date: TODAY_DATE, times: ["02:30 PM", "06:15 PM", "09:30 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "guntur", theatreId: "cine-prime-cinema", movieId: "toxic", date: TODAY_DATE, times: ["11:15 AM"], language: "Kannada" }),
+  ...createShows({ locationId: "guntur", theatreId: "cine-prime-cinema", movieId: "toxic", date: TODAY_DATE, times: ["04:00 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "guntur", theatreId: "cine-prime-cinema", movieId: "toxic", date: TOMORROW_DATE, times: ["02:30 PM", "06:15 PM", "09:30 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "guntur", theatreId: "cine-prime-cinema", movieId: "toxic", date: TOMORROW_DATE, times: ["11:15 AM"], language: "Kannada" }),
+  ...createShows({ locationId: "guntur", theatreId: "cine-prime-cinema", movieId: "toxic", date: TOMORROW_DATE, times: ["04:00 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "guntur", theatreId: "cine-prime-cinema", movieId: "toxic", date: NEXT_DAY_DATE, times: ["02:30 PM", "06:15 PM", "09:30 PM"], language: "Telugu" }),
+
+  // Bhaskar Cinemas
+  ...createShows({ locationId: "guntur", theatreId: "bhaskar-cinemas", movieId: "toxic", date: TODAY_DATE, times: ["02:30 PM", "06:30 PM", "09:45 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "guntur", theatreId: "bhaskar-cinemas", movieId: "toxic", date: TODAY_DATE, times: ["11:30 AM"], language: "Kannada" }),
+  ...createShows({ locationId: "guntur", theatreId: "bhaskar-cinemas", movieId: "toxic", date: TODAY_DATE, times: ["04:15 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "guntur", theatreId: "bhaskar-cinemas", movieId: "toxic", date: TOMORROW_DATE, times: ["02:30 PM", "06:30 PM", "09:45 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "guntur", theatreId: "bhaskar-cinemas", movieId: "toxic", date: TOMORROW_DATE, times: ["11:30 AM"], language: "Kannada" }),
+  ...createShows({ locationId: "guntur", theatreId: "bhaskar-cinemas", movieId: "toxic", date: TOMORROW_DATE, times: ["04:15 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "guntur", theatreId: "bhaskar-cinemas", movieId: "toxic", date: NEXT_DAY_DATE, times: ["02:30 PM", "06:30 PM", "09:45 PM"], language: "Telugu" }),
+
+  // Cine Square
+  ...createShows({ locationId: "guntur", theatreId: "cine-square", movieId: "toxic", date: TODAY_DATE, times: ["02:45 PM", "06:45 PM", "09:45 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "guntur", theatreId: "cine-square", movieId: "toxic", date: TODAY_DATE, times: ["11:45 AM"], language: "Kannada" }),
+  ...createShows({ locationId: "guntur", theatreId: "cine-square", movieId: "toxic", date: TODAY_DATE, times: ["04:30 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "guntur", theatreId: "cine-square", movieId: "toxic", date: TOMORROW_DATE, times: ["02:45 PM", "06:45 PM", "09:45 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "guntur", theatreId: "cine-square", movieId: "toxic", date: TOMORROW_DATE, times: ["11:45 AM"], language: "Kannada" }),
+  ...createShows({ locationId: "guntur", theatreId: "cine-square", movieId: "toxic", date: TOMORROW_DATE, times: ["04:30 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "guntur", theatreId: "cine-square", movieId: "toxic", date: NEXT_DAY_DATE, times: ["02:45 PM", "06:45 PM", "09:45 PM"], language: "Telugu" }),
+
+  // Studio 81 Cinemas
+  ...createShows({ locationId: "guntur", theatreId: "studio-81-cinemas", movieId: "toxic", date: TODAY_DATE, times: ["11:30 AM", "02:45 PM", "06:30 PM", "09:45 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "guntur", theatreId: "studio-81-cinemas", movieId: "toxic", date: TODAY_DATE, times: ["01:30 PM", "07:30 PM"], language: "Kannada" }),
+  ...createShows({ locationId: "guntur", theatreId: "studio-81-cinemas", movieId: "toxic", date: TODAY_DATE, times: ["04:30 PM", "10:30 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "guntur", theatreId: "studio-81-cinemas", movieId: "toxic", date: TOMORROW_DATE, times: ["11:30 AM", "02:45 PM", "06:30 PM", "09:45 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "guntur", theatreId: "studio-81-cinemas", movieId: "toxic", date: TOMORROW_DATE, times: ["01:30 PM", "07:30 PM"], language: "Kannada" }),
+  ...createShows({ locationId: "guntur", theatreId: "studio-81-cinemas", movieId: "toxic", date: TOMORROW_DATE, times: ["04:30 PM", "10:30 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "guntur", theatreId: "studio-81-cinemas", movieId: "toxic", date: NEXT_DAY_DATE, times: ["02:45 PM", "06:30 PM", "09:45 PM"], language: "Telugu" }),
+
+  // JLE Cinemas
+  ...createShows({ locationId: "guntur", theatreId: "jle-cinemas", movieId: "toxic", date: TODAY_DATE, times: ["11:00 AM", "02:00 PM", "05:30 PM", "09:00 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "guntur", theatreId: "jle-cinemas", movieId: "toxic", date: TODAY_DATE, times: ["01:00 PM", "07:00 PM"], language: "Kannada" }),
+  ...createShows({ locationId: "guntur", theatreId: "jle-cinemas", movieId: "toxic", date: TODAY_DATE, times: ["04:00 PM", "10:00 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "guntur", theatreId: "jle-cinemas", movieId: "toxic", date: TOMORROW_DATE, times: ["11:00 AM", "02:00 PM", "05:30 PM", "09:00 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "guntur", theatreId: "jle-cinemas", movieId: "toxic", date: TOMORROW_DATE, times: ["01:00 PM", "07:00 PM"], language: "Kannada" }),
+  ...createShows({ locationId: "guntur", theatreId: "jle-cinemas", movieId: "toxic", date: TOMORROW_DATE, times: ["04:00 PM", "10:00 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "guntur", theatreId: "jle-cinemas", movieId: "toxic", date: NEXT_DAY_DATE, times: ["02:00 PM", "05:30 PM", "09:00 PM"], language: "Telugu" }),
+
   // GS Cinemas
-  ...createShows({
-    locationId: "guntur",
-    theatreId: "gs-cinemas",
-    movieId: "vishwanath-and-sons",
-    date: TODAY_DATE,
-    times: ["02:30 PM", "06:15 PM", "09:30 PM"]
-  }),
-  ...createShows({
-    locationId: "guntur",
-    theatreId: "gs-cinemas",
-    movieId: "vishwanath-and-sons",
-    date: TOMORROW_DATE,
-    times: ["02:30 PM", "06:15 PM", "09:30 PM"]
-  }),
+  ...createShows({ locationId: "guntur", theatreId: "gs-cinemas", movieId: "toxic", date: TODAY_DATE, times: ["02:30 PM", "06:15 PM", "09:30 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "guntur", theatreId: "gs-cinemas", movieId: "toxic", date: TODAY_DATE, times: ["11:30 AM"], language: "Kannada" }),
+  ...createShows({ locationId: "guntur", theatreId: "gs-cinemas", movieId: "toxic", date: TODAY_DATE, times: ["04:15 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "guntur", theatreId: "gs-cinemas", movieId: "toxic", date: TOMORROW_DATE, times: ["02:30 PM", "06:15 PM", "09:30 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "guntur", theatreId: "gs-cinemas", movieId: "toxic", date: TOMORROW_DATE, times: ["11:30 AM"], language: "Kannada" }),
+  ...createShows({ locationId: "guntur", theatreId: "gs-cinemas", movieId: "toxic", date: TOMORROW_DATE, times: ["04:15 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "guntur", theatreId: "gs-cinemas", movieId: "toxic", date: NEXT_DAY_DATE, times: ["02:30 PM", "06:15 PM", "09:30 PM"], language: "Telugu" }),
 
   // ==========================================
   // 2. VIJAYAWADA SHOWS
@@ -668,6 +755,56 @@ export const shows: TicketXShow[] = [
     date: TOMORROW_DATE,
     times: ["02:30 PM", "06:30 PM", "09:30 PM"],
   }),
+
+  // ==========================================
+  // TOXIC SHOWS — ALL 4 NARASARAOPETA (NRT) THEATRES (Requirement 18, 20, 23)
+  // ==========================================
+  // Geetha Multiplex
+  ...createShows({ locationId: "nrt", theatreId: "geetha-multiplex", movieId: "toxic", date: TODAY_DATE, times: ["11:00 AM", "02:30 PM", "06:15 PM", "09:45 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "nrt", theatreId: "geetha-multiplex", movieId: "toxic", date: TODAY_DATE, times: ["01:30 PM", "07:30 PM"], language: "Kannada" }),
+  ...createShows({ locationId: "nrt", theatreId: "geetha-multiplex", movieId: "toxic", date: TODAY_DATE, times: ["04:30 PM", "10:15 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "nrt", theatreId: "geetha-multiplex", movieId: "toxic", date: TOMORROW_DATE, times: ["11:00 AM", "02:30 PM", "06:15 PM", "09:45 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "nrt", theatreId: "geetha-multiplex", movieId: "toxic", date: TOMORROW_DATE, times: ["01:30 PM", "07:30 PM"], language: "Kannada" }),
+  ...createShows({ locationId: "nrt", theatreId: "geetha-multiplex", movieId: "toxic", date: TOMORROW_DATE, times: ["04:30 PM", "10:15 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "nrt", theatreId: "geetha-multiplex", movieId: "toxic", date: NEXT_DAY_DATE, times: ["02:30 PM", "06:15 PM", "09:45 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "nrt", theatreId: "geetha-multiplex", movieId: "toxic", date: NEXT_DAY_DATE, times: ["01:30 PM"], language: "Kannada" }),
+  ...createShows({ locationId: "nrt", theatreId: "geetha-multiplex", movieId: "toxic", date: NEXT_DAY_DATE, times: ["04:30 PM"], language: "Hindi" }),
+
+  // Eswar Mahal Deluxe
+  ...createShows({ locationId: "nrt", theatreId: "eswar-mahal-deluxe", movieId: "toxic", date: TODAY_DATE, times: ["02:30 PM", "06:30 PM", "09:30 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "nrt", theatreId: "eswar-mahal-deluxe", movieId: "toxic", date: TODAY_DATE, times: ["11:30 AM"], language: "Kannada" }),
+  ...createShows({ locationId: "nrt", theatreId: "eswar-mahal-deluxe", movieId: "toxic", date: TODAY_DATE, times: ["04:15 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "nrt", theatreId: "eswar-mahal-deluxe", movieId: "toxic", date: TOMORROW_DATE, times: ["02:30 PM", "06:30 PM", "09:30 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "nrt", theatreId: "eswar-mahal-deluxe", movieId: "toxic", date: TOMORROW_DATE, times: ["11:30 AM"], language: "Kannada" }),
+  ...createShows({ locationId: "nrt", theatreId: "eswar-mahal-deluxe", movieId: "toxic", date: TOMORROW_DATE, times: ["04:15 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "nrt", theatreId: "eswar-mahal-deluxe", movieId: "toxic", date: NEXT_DAY_DATE, times: ["02:30 PM", "06:30 PM", "09:30 PM"], language: "Telugu" }),
+
+  // Vijetha Deluxe
+  ...createShows({ locationId: "nrt", theatreId: "vijetha-deluxe", movieId: "toxic", date: TODAY_DATE, times: ["02:30 PM", "06:30 PM", "09:30 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "nrt", theatreId: "vijetha-deluxe", movieId: "toxic", date: TODAY_DATE, times: ["11:30 AM"], language: "Kannada" }),
+  ...createShows({ locationId: "nrt", theatreId: "vijetha-deluxe", movieId: "toxic", date: TODAY_DATE, times: ["04:15 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "nrt", theatreId: "vijetha-deluxe", movieId: "toxic", date: TOMORROW_DATE, times: ["02:30 PM", "06:30 PM", "09:30 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "nrt", theatreId: "vijetha-deluxe", movieId: "toxic", date: TOMORROW_DATE, times: ["11:30 AM"], language: "Kannada" }),
+  ...createShows({ locationId: "nrt", theatreId: "vijetha-deluxe", movieId: "toxic", date: TOMORROW_DATE, times: ["04:15 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "nrt", theatreId: "vijetha-deluxe", movieId: "toxic", date: NEXT_DAY_DATE, times: ["02:30 PM", "06:30 PM", "09:30 PM"], language: "Telugu" }),
+
+  // Lakshmi Narasimha Delux Theatre
+  ...createShows({ locationId: "nrt", theatreId: "lakshmi-narasimha", movieId: "toxic", date: TODAY_DATE, times: ["02:30 PM", "06:30 PM", "09:30 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "nrt", theatreId: "lakshmi-narasimha", movieId: "toxic", date: TODAY_DATE, times: ["11:30 AM"], language: "Kannada" }),
+  ...createShows({ locationId: "nrt", theatreId: "lakshmi-narasimha", movieId: "toxic", date: TODAY_DATE, times: ["04:15 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "nrt", theatreId: "lakshmi-narasimha", movieId: "toxic", date: TOMORROW_DATE, times: ["02:30 PM", "06:30 PM", "09:30 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "nrt", theatreId: "lakshmi-narasimha", movieId: "toxic", date: TOMORROW_DATE, times: ["11:30 AM"], language: "Kannada" }),
+  ...createShows({ locationId: "nrt", theatreId: "lakshmi-narasimha", movieId: "toxic", date: TOMORROW_DATE, times: ["04:15 PM"], language: "Hindi" }),
+  // Saradambha / Sharadamba Theatre
+  ...createShows({ locationId: "nrt", theatreId: "saradambha-theatre", movieId: "toxic", date: TODAY_DATE, times: ["11:15 AM", "02:30 PM", "06:15 PM", "09:30 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "nrt", theatreId: "saradambha-theatre", movieId: "toxic", date: TODAY_DATE, times: ["01:30 PM"], language: "Kannada" }),
+  ...createShows({ locationId: "nrt", theatreId: "saradambha-theatre", movieId: "toxic", date: TODAY_DATE, times: ["04:30 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "nrt", theatreId: "saradambha-theatre", movieId: "toxic", date: TOMORROW_DATE, times: ["11:15 AM", "02:30 PM", "06:15 PM", "09:30 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "nrt", theatreId: "saradambha-theatre", movieId: "toxic", date: TOMORROW_DATE, times: ["01:30 PM"], language: "Kannada" }),
+  ...createShows({ locationId: "nrt", theatreId: "saradambha-theatre", movieId: "toxic", date: TOMORROW_DATE, times: ["04:30 PM"], language: "Hindi" }),
+  ...createShows({ locationId: "nrt", theatreId: "saradambha-theatre", movieId: "toxic", date: NEXT_DAY_DATE, times: ["02:30 PM", "06:30 PM", "09:30 PM"], language: "Telugu" }),
+  ...createShows({ locationId: "nrt", theatreId: "saradambha-theatre", movieId: "irumudi", date: TODAY_DATE, times: ["02:30 PM", "06:30 PM", "09:30 PM"] }),
+  ...createShows({ locationId: "nrt", theatreId: "saradambha-theatre", movieId: "irumudi", date: TOMORROW_DATE, times: ["02:30 PM", "06:30 PM", "09:30 PM"] }),
 
   // ==========================================
   // 4. SATTENAPALLI SHOWS

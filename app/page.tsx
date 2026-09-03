@@ -9,7 +9,7 @@ import { ComingSoonCity } from '@/components/location/ComingSoonCity';
 import { mockEvents } from '@/data/events';
 import { Movie } from '@/types/movie';
 import { useLocation } from '@/context/LocationContext';
-import { getMoviesForLocation, getTheatresForLocation } from '@/lib/data';
+import { getMoviesForLocation, getTheatresForLocation, getEventsForLocation } from '@/lib/data';
 import { MapPin, Sparkles, Languages } from 'lucide-react';
 import { INDIAN_LANGUAGES } from '@/lib/languages';
 
@@ -22,6 +22,11 @@ export default function Home() {
 
   const theatresForLocation = useMemo(() => {
     return getTheatresForLocation(selectedLocation.id);
+  }, [selectedLocation.id]);
+
+  const eventsForLocation = useMemo(() => {
+    const list = getEventsForLocation(selectedLocation.id);
+    return list.length > 0 ? list : mockEvents;
   }, [selectedLocation.id]);
 
   const formattedNowShowing: Movie[] = useMemo(() => {
@@ -106,10 +111,11 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {mockEvents.slice(0, 4).map((evt, idx) => (
+            {eventsForLocation.slice(0, 4).map((evt, idx) => (
               <EventCard key={evt.id} event={evt} index={idx} />
             ))}
           </div>
+
         </div>
       </section>
 

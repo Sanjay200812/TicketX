@@ -9,7 +9,6 @@ import { SeatLegend } from './SeatLegend';
 import { CinemaScreen } from './CinemaScreen';
 import { TemporaryMinimap } from './TemporaryMinimap';
 import { useAuth } from '@/context/AuthContext';
-import { DoorOpen } from 'lucide-react';
 
 interface TheatreSeatMapProps {
   layout: TicketXSeatLayout;
@@ -95,14 +94,6 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
 
       {/* Legend */}
       <SeatLegend sections={sections} />
-
-      {/* AUDITORIUM ENTRANCE CORRIDOR */}
-      <div className="w-full max-w-4xl flex items-center justify-start mb-4 px-2">
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/15 text-amber-300 border border-amber-500/30 text-xs font-bold font-mono shadow-md">
-          <DoorOpen className="w-4 h-4 text-amber-400" />
-          <span>← ENTRY</span>
-        </div>
-      </div>
 
       {/* SEATING MAP SCROLL CONTAINER */}
       <div

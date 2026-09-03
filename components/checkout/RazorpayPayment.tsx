@@ -186,6 +186,8 @@ export function RazorpayPayment({
           bookingDetails: {
             movieId: movie.id,
             movieTitle: movie.title,
+            moviePoster: movie.poster,
+            movieLanguage: show.language || movie.language || 'Telugu',
             theatreName: theatre.name,
             screenName: show.screenName || show.screen || "Screen 1",
             date: show.date,

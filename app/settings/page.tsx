@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Settings as SettingsIcon, MapPin, HelpCircle, User, LogOut, ArrowRight, ShieldCheck } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth, formatIndianPhone } from '@/context/AuthContext';
 import { useLocation } from '@/context/LocationContext';
 import { Button } from '@/components/ui/button';
 
@@ -60,11 +60,12 @@ export default function SettingsPage() {
                   )}
 
                   <div className="min-w-0 flex-1">
-                    <p className="font-bold text-sm text-white truncate">{user.name || 'TicketX User'}</p>
-                    <p className="text-xs text-muted-foreground truncate">{user.email || user.phone || 'No email associated'}</p>
+                    <p className="font-bold text-sm text-white truncate">{user.name || 'TicketX Customer'}</p>
+                    <p className="text-xs text-muted-foreground font-mono truncate">{formatIndianPhone(user.phoneNumber || user.phone)}</p>
                     <p className="text-[10px] text-emerald-400 font-medium flex items-center gap-1 mt-0.5">
-                      <ShieldCheck className="w-3 h-3 text-emerald-400" /> Firebase Verified Account
+                      <ShieldCheck className="w-3 h-3 text-emerald-400" /> Mobile Verified Customer
                     </p>
+
                   </div>
 
                   <Link href="/profile">

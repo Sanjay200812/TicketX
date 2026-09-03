@@ -63,8 +63,8 @@ export function BookingSummary({ movie, theatre, show, selectedSeats, isEvent = 
           </div>
           <div>
             <h3 className="text-lg font-bold text-white mb-1">{movie.title}</h3>
-            <p className="text-muted-foreground text-sm">
-              {movie.language} • {show.format || '2D'}
+            <p className="text-muted-foreground text-sm font-medium">
+              <span className="text-white font-bold">{show.language || movie.language || 'Telugu'}</span> • {show.format || '2D'}
             </p>
           </div>
         </div>

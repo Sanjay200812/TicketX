@@ -62,7 +62,7 @@ export function ShowtimeConfirmationModal({
               <div>
                 <h3 className="text-xl font-bold font-heading text-white mb-1">{movie.title}</h3>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-                  <span className="bg-secondary px-2 py-0.5 rounded border border-white/5">{movie.language}</span>
+                  <span className="bg-secondary px-2 py-0.5 rounded border border-white/5 font-mono font-bold text-white">{show.language || movie.language}</span>
                   <span className="text-primary font-semibold">{show.format || '2D'}</span>
                 </div>
                 <p className="text-xs text-emerald-400 flex items-center gap-1 font-mono">

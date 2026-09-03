@@ -182,6 +182,7 @@ export default function MyBookingsPage() {
 
                     <h3 className="text-xl font-bold font-heading mb-1 truncate text-white">{booking.movieTitle}</h3>
                     <p className="text-sm text-muted-foreground mb-4 font-medium">
+                      {booking.movieLanguage && <span className="text-gray-300 font-semibold">{booking.movieLanguage} • </span>}
                       {new Date(booking.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })} • {booking.time}
                     </p>
 

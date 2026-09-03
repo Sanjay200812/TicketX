@@ -9,9 +9,10 @@ export const MAX_SEATS_PER_BOOKING = 10;
 interface BookingBarProps {
   selectedSeats: Seat[];
   onProceed: () => void;
+  loading?: boolean;
 }
 
-export function BookingBar({ selectedSeats, onProceed }: BookingBarProps) {
+export function BookingBar({ selectedSeats, onProceed, loading }: BookingBarProps) {
   const isVisible = selectedSeats.length > 0;
 
   // Group seats by category for dynamic price breakdown
@@ -93,9 +94,10 @@ export function BookingBar({ selectedSeats, onProceed }: BookingBarProps) {
               <Button
                 size="lg"
                 onClick={onProceed}
+                disabled={loading}
                 className="rounded-full px-8 font-bold text-base shadow-[0_0_20px_rgba(216,33,50,0.5)] hover:scale-105 transition-transform"
               >
-                Proceed to Checkout →
+                {loading ? 'Reserving...' : 'Proceed to Checkout →'}
               </Button>
             </div>
           </div>

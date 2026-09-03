@@ -7,6 +7,7 @@ export const movies: TicketXMovie[] = [
     poster: "/posters/debba-debba.jpg",
     backdrop: "/posters/debba-debba.jpg",
     language: "Telugu",
+    languages: ["Telugu"],
     genres: ["Action", "Comedy", "Drama"],
     duration: "2h 20m",
     rating: 8.7,
@@ -33,6 +34,7 @@ export const movies: TicketXMovie[] = [
     poster: "/posters/irumudi.jpg",
     backdrop: "/posters/irumudi.jpg",
     language: "Telugu",
+    languages: ["Telugu"],
     genres: ["Drama", "Action"],
     duration: "2h 25m",
     rating: 8.8,
@@ -57,6 +59,7 @@ export const movies: TicketXMovie[] = [
     poster: "/posters/vishwanath-and-sons.jpg",
     backdrop: "/posters/vishwanath-and-sons.jpg",
     language: "Telugu",
+    languages: ["Telugu"],
     genres: ["Family", "Drama"],
     duration: "2h 15m",
     rating: 8.4,
@@ -80,6 +83,7 @@ export const movies: TicketXMovie[] = [
     poster: "/posters/insidious-out-of-the-further.jpg",
     backdrop: "/posters/insidious-out-of-the-further.jpg",
     language: "English / Telugu",
+    languages: ["English", "Telugu"],
     genres: ["Horror", "Mystery"],
     duration: "1h 52m",
     rating: 7.9,
@@ -103,6 +107,7 @@ export const movies: TicketXMovie[] = [
     poster: "/posters/paw-patrol-the-dino-movie.jpg",
     backdrop: "/posters/paw-patrol-the-dino-movie.jpg",
     language: "English / Telugu",
+    languages: ["English", "Telugu"],
     genres: ["Animation", "Adventure", "Family"],
     duration: "1h 35m",
     rating: 8.1,
@@ -124,6 +129,7 @@ export const movies: TicketXMovie[] = [
     poster: "/posters/fight-maha.jpg",
     backdrop: "/posters/fight-maha.jpg",
     language: "Telugu",
+    languages: ["Telugu"],
     genres: ["Action", "Thriller"],
     duration: "2h 10m",
     rating: 8.0,
@@ -145,6 +151,7 @@ export const movies: TicketXMovie[] = [
     poster: "/posters/khalifa-the-ruler.jpg",
     backdrop: "/posters/khalifa-the-ruler.jpg",
     language: "Telugu / Hindi",
+    languages: ["Telugu", "Hindi"],
     genres: ["Action", "Crime", "Drama"],
     duration: "2h 38m",
     rating: 8.9,
@@ -168,6 +175,7 @@ export const movies: TicketXMovie[] = [
     poster: "/posters/dc.jpg",
     backdrop: "/posters/dc.jpg",
     language: "Telugu / English",
+    languages: ["Telugu", "English"],
     genres: ["Superhero", "Action"],
     duration: "2h 30m",
     rating: 8.3,
@@ -189,6 +197,7 @@ export const movies: TicketXMovie[] = [
     poster: "/posters/hushar-pittalu.jpg",
     backdrop: "/posters/hushar-pittalu.jpg",
     language: "Telugu",
+    languages: ["Telugu"],
     genres: ["Comedy", "Drama"],
     duration: "2h 18m",
     rating: 8.2,
@@ -202,6 +211,32 @@ export const movies: TicketXMovie[] = [
     crew: [
       { id: "cr25", name: "Anudeep KV", role: "Director" },
       { id: "cr26", name: "Radhan", role: "Music" }
+    ]
+  },
+  {
+    id: "toxic",
+    title: "TOXIC",
+    poster: "/posters/toxic.jpg",
+    backdrop: "/posters/toxic.jpg",
+    language: "Telugu / Kannada / Hindi",
+    languages: ["Telugu", "Kannada", "Hindi"],
+    genres: ["Action", "Crime", "Thriller", "Drama"],
+    duration: "2h 45m",
+    rating: 9.2,
+    certificate: "U/A",
+    releaseDate: "2026-08-25",
+    description: "A dark fairy tale for grown-ups set against the glamorous yet ruthless drug mafia underworld.",
+    cast: [
+      { id: "c25", name: "Yash", character: "Raya", image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80" },
+      { id: "c26", name: "Kiara Advani", character: "Tara", image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" },
+      { id: "c27", name: "Nayanthara", character: "Ganga", image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80" },
+      { id: "c28", name: "Huma Qureshi", character: "Zoya", image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80" }
+    ],
+    crew: [
+      { id: "cr27", name: "Geetu Mohandas", role: "Director" },
+      { id: "cr28", name: "Venkat K. Narayana", role: "Producer" },
+      { id: "cr29", name: "Ravi Basrur", role: "Music" },
+      { id: "cr30", name: "Rajeev Ravi", role: "Cinematography" }
     ]
   }
 ];

@@ -27,6 +27,7 @@ export interface TicketXMovie {
   backdrop?: string;
 
   language?: string;
+  languages?: string[];
   genres?: string[];
   duration?: string;
   rating?: number;

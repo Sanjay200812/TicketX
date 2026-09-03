@@ -1,45 +1,30 @@
 "use client";
 
-import React from 'react';
-import { VerificationCodeInput, isDevAuthMode, DEV_OTP } from './VerificationCodeInput';
+import React, { useState } from 'react';
+import { VerificationCodeInput } from './VerificationCodeInput';
 
-export { isDevAuthMode, DEV_OTP };
-export const DEMO_OTP = DEV_OTP;
 export const MAX_OTP_ATTEMPTS = 5;
 
-export type OtpStatus =
-  | 'entering'
-  | 'verifying'
-  | 'tearing-animation'
-  | 'verified-just-a-sec'
-  | 'success'
-  | 'failed';
-
 interface OtpInputProps {
-  recipient: string;
-  recipientType: 'phone' | 'email';
-  onVerified: () => void | Promise<void>;
-  onResendOtp: () => void;
-  onMaxAttemptsReached: () => void;
+  recipient?: string;
+  onVerified?: (code: string) => void | Promise<void>;
+  onResendOtp?: () => void;
+  disabled?: boolean;
 }
 
 export function OtpInput({
-  recipient,
-  recipientType,
   onVerified,
-  onResendOtp,
-  onMaxAttemptsReached,
+  disabled = false,
 }: OtpInputProps) {
+  const [code, setCode] = useState('');
+
   return (
     <VerificationCodeInput
       length={6}
-      recipient={recipient}
-      recipientType={recipientType}
-      autoFocus={true}
-      onVerified={onVerified}
-      onResendOtp={onResendOtp}
-      onMaxAttemptsReached={onMaxAttemptsReached}
-      showTearingAnimation={true}
+      value={code}
+      onChange={setCode}
+      onComplete={onVerified}
+      disabled={disabled}
     />
   );
 }

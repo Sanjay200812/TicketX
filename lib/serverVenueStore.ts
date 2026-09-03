@@ -83,3 +83,10 @@ export function getUserVenueRegistrations(userId?: string, email?: string): Venu
     .filter((req) => (userId && req.userId === userId) || (email && req.email.toLowerCase() === email.toLowerCase()))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
+
+export function getAllVenueRegistrations(): VenueRegistrationRequest[] {
+  return Object.values(memoryVenueDB.requests).sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+

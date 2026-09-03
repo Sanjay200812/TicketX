@@ -35,12 +35,12 @@ export default function ContactUsPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
-  // Pre-fill name and email from logged-in user profile
+  // Pre-fill name and phone from logged-in user profile
   useEffect(() => {
     if (user) {
       if (user.name) setName(user.name);
+      if (user.phoneNumber || user.phone) setPhone(user.phoneNumber || user.phone || '');
       if (user.email) setEmail(user.email);
-      if (user.phone) setPhone(user.phone);
     }
   }, [user]);
 
@@ -48,10 +48,11 @@ export default function ContactUsPage() {
     e.preventDefault();
     setError(null);
 
-    if (!name.trim() || !email.trim() || !subject.trim() || !message.trim()) {
-      setError('Please fill in all required fields.');
+    if (!name.trim() || !subject.trim() || !message.trim()) {
+      setError('Please fill in all required fields (Name, Subject, Message).');
       return;
     }
+
 
     setLoading(true);
 
@@ -167,11 +168,10 @@ export default function ContactUsPage() {
 
               <div>
                 <label className="text-xs font-semibold text-gray-300 block mb-1.5 flex items-center gap-1.5">
-                  <Mail className="w-3.5 h-3.5 text-primary" /> Email Address <span className="text-primary">*</span>
+                  <Mail className="w-3.5 h-3.5 text-muted-foreground" /> Email Address (Optional)
                 </label>
                 <Input
                   type="email"
-                  required
                   placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -184,16 +184,17 @@ export default function ContactUsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-semibold text-gray-300 block mb-1.5 flex items-center gap-1.5">
-                  <Phone className="w-3.5 h-3.5 text-muted-foreground" /> Phone Number (Optional)
+                  <Phone className="w-3.5 h-3.5 text-primary" /> Mobile Number
                 </label>
                 <Input
                   type="tel"
                   placeholder="+91 9876543210"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="bg-black/40 border-white/10 text-white text-sm"
+                  className="bg-black/40 border-white/10 text-white text-sm font-mono"
                 />
               </div>
+
 
               <div>
                 <label className="text-xs font-semibold text-gray-300 block mb-1.5 flex items-center gap-1.5">

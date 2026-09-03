@@ -1,16 +1,12 @@
 import type { Metadata } from "next";
 import { Inter, Space_Grotesk, Cinzel } from "next/font/google";
 import "./globals.css";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
 import { LocationProvider } from "@/context/LocationContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { FavoritesProvider } from "@/context/FavoritesContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { SidebarProvider } from "@/context/SidebarContext";
-import { MainLayout } from "@/components/layout/MainLayout";
-import { SupportChatbot } from "@/components/support/SupportChatbot";
-import { CinematicIntro } from "@/components/shared/CinematicIntro";
+import { PublicShell } from "@/components/layout/PublicShell";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-heading" });
@@ -34,13 +30,7 @@ export default function RootLayout({
             <LocationProvider>
               <FavoritesProvider>
                 <SidebarProvider>
-                  <CinematicIntro />
-                  <Navbar />
-                  <MainLayout>
-                    {children}
-                  </MainLayout>
-                  <SupportChatbot />
-                  <Footer />
+                  <PublicShell>{children}</PublicShell>
                 </SidebarProvider>
               </FavoritesProvider>
             </LocationProvider>

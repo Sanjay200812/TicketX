@@ -51,7 +51,8 @@ export function Footer() {
             <h4 className="text-white font-semibold text-sm mb-4">Partners &amp; Venue Owners</h4>
             <ul className="space-y-2 text-xs text-muted-foreground">
               <li><Link href="/partners" className="text-amber-400 hover:underline transition-colors font-bold">Partner with TicketX</Link></li>
-              <li><Link href="/register" className="hover:text-primary transition-colors">Register Your Hall</Link></li>
+              <li><Link href="/partners/register-venue" className="hover:text-primary transition-colors">Register Your Hall</Link></li>
+
             </ul>
           </div>
         </div>

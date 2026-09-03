@@ -1,13 +1,15 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { onSnapshot, collection } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { TicketXLocation, City } from '@/types/location';
-import { locations } from '@/data/locations';
+import { locations as defaultLocations } from '@/data/locations';
 import { useAuth } from '@/context/AuthContext';
 
-export const SUPPORTED_LOCATIONS: TicketXLocation[] = locations;
+export const SUPPORTED_LOCATIONS: TicketXLocation[] = defaultLocations;
 
-export const POPULAR_CITIES: City[] = locations.map((loc) => ({
+export const POPULAR_CITIES: City[] = defaultLocations.map((loc) => ({
   id: loc.id,
   name: loc.name,
   state: loc.state,
@@ -16,6 +18,7 @@ export const POPULAR_CITIES: City[] = locations.map((loc) => ({
   isPopular: loc.isPopular,
   bookingEnabled: loc.bookingEnabled,
 }));
+
 
 interface LocationContextType {
   location: {
@@ -72,6 +75,7 @@ function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
 export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
 
+  const [supportedLocations, setSupportedLocations] = useState<TicketXLocation[]>(defaultLocations);
   const [selectedLocationState, setSelectedLocationState] = useState<TicketXLocation | null>(null);
   const [isGeolocation, setIsGeolocation] = useState<boolean>(false);
   const [savedLocationIds, setSavedLocationIds] = useState<string[]>([]);
@@ -84,6 +88,25 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const storageKey = user?.id ? `ticketx_saved_locations_${user.id}` : 'ticketx_saved_locations_guest';
 
+  useEffect(() => {
+    try {
+      const unsubscribe = onSnapshot(collection(db, 'locations'), (snapshot) => {
+        if (!snapshot.empty) {
+          const loaded: TicketXLocation[] = [];
+          snapshot.forEach((d) => {
+            loaded.push({ ...(d.data() as TicketXLocation), id: d.id });
+          });
+          if (loaded.length > 0) {
+            setSupportedLocations(loaded);
+          }
+        }
+      });
+      return () => unsubscribe();
+    } catch {
+      // Fall back to defaultLocations
+    }
+  }, []);
+
   const performGeolocationLookup = () => {
     if (typeof window === 'undefined' || !('geolocation' in navigator)) return;
 
@@ -95,10 +118,10 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       (position) => {
         const { latitude, longitude } = position.coords;
 
-        let closestLoc = SUPPORTED_LOCATIONS[0];
+        let closestLoc = supportedLocations[0];
         let minDistance = Infinity;
 
-        SUPPORTED_LOCATIONS.forEach((loc) => {
+        supportedLocations.forEach((loc) => {
           const coords = CITY_COORDS[loc.id] || { lat: 16.3067, lng: 80.4365 };
           const dist = getDistanceKm(latitude, longitude, coords.lat, coords.lng);
           if (dist < minDistance) {
@@ -133,7 +156,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // 1. Check if user previously selected a city
     const savedLocId = localStorage.getItem('ticketx_location_id');
     if (savedLocId) {
-      const match = SUPPORTED_LOCATIONS.find((l) => l.id === savedLocId);
+      const match = supportedLocations.find((l) => l.id === savedLocId);
       if (match) {
         setSelectedLocationState(match);
       }
@@ -154,7 +177,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     } else {
       setSavedLocationIds([]);
     }
-  }, [storageKey]);
+  }, [storageKey, supportedLocations]);
 
   const selectLocation = (loc: TicketXLocation) => {
     setSelectedLocationState(loc);
@@ -164,7 +187,7 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const selectCity = (city: City) => {
-    const match = SUPPORTED_LOCATIONS.find((l) => l.id === city.id) || SUPPORTED_LOCATIONS[0];
+    const match = supportedLocations.find((l) => l.id === city.id) || supportedLocations[0];
     selectLocation(match);
   };
 
@@ -185,8 +208,9 @@ export const LocationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   };
 
-  const savedLocations = SUPPORTED_LOCATIONS.filter((loc) => savedLocationIds.includes(loc.id));
-  const selectedLocation = selectedLocationState || SUPPORTED_LOCATIONS[0];
+  const savedLocations = supportedLocations.filter((loc) => savedLocationIds.includes(loc.id));
+  const selectedLocation = selectedLocationState || supportedLocations[0];
+
 
   const city: City = {
     id: selectedLocation.id,

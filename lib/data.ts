@@ -1,19 +1,87 @@
+import { onSnapshot, collection } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { TicketXLocation } from '@/types/location';
 import { TicketXMovie } from '@/types/movie';
 import { TicketXTheatre } from '@/types/theatre';
 import { TicketXShow } from '@/types/show';
 import { TicketXEvent } from '@/types/event';
 
-import { locations } from '@/data/locations';
-import { movies } from '@/data/movies';
-import { theatres } from '@/data/theatres';
-import { shows } from '@/data/shows';
-import { events } from '@/data/events';
+import { locations as staticLocations } from '@/data/locations';
+import { movies as staticMovies } from '@/data/movies';
+import { theatres as staticTheatres } from '@/data/theatres';
+import { shows as staticShows } from '@/data/shows';
+import { events as staticEvents } from '@/data/events';
 
-/**
- * Sequential alphabetic row label generator.
- * Row 0 -> A, Row 25 -> Z, Row 26 -> AA, Row 27 -> AB
- */
+// In-memory live store populated by Firestore listeners, falling back to static
+let liveMovies: TicketXMovie[] = [...staticMovies];
+let liveTheatres: TicketXTheatre[] = [...staticTheatres];
+let liveShows: TicketXShow[] = [...staticShows];
+let liveLocations: TicketXLocation[] = [...staticLocations];
+let liveEvents: TicketXEvent[] = [...staticEvents];
+
+// Initialize real-time listeners on client
+if (typeof window !== 'undefined') {
+  try {
+    onSnapshot(collection(db, 'movies'), (snapshot) => {
+      if (!snapshot.empty) {
+        const loaded: TicketXMovie[] = [];
+        snapshot.forEach((d) => {
+          const data = d.data() as TicketXMovie;
+          if (data.status === 'published' || !data.status) {
+            loaded.push({ ...data, id: d.id });
+          }
+        });
+        if (loaded.length > 0) liveMovies = loaded;
+      }
+    });
+
+    onSnapshot(collection(db, 'theatres'), (snapshot) => {
+      if (!snapshot.empty) {
+        const loaded: TicketXTheatre[] = [];
+        snapshot.forEach((d) => {
+          loaded.push({ ...(d.data() as TicketXTheatre), id: d.id });
+        });
+        if (loaded.length > 0) liveTheatres = loaded;
+      }
+    });
+
+    onSnapshot(collection(db, 'shows'), (snapshot) => {
+      if (!snapshot.empty) {
+        const loaded: TicketXShow[] = [];
+        snapshot.forEach((d) => {
+          const data = d.data() as TicketXShow & { status?: string };
+          if (data.status === 'open' || !data.status) {
+            loaded.push({ ...data, id: d.id });
+          }
+        });
+        if (loaded.length > 0) liveShows = loaded;
+      }
+    });
+
+    onSnapshot(collection(db, 'locations'), (snapshot) => {
+      if (!snapshot.empty) {
+        const loaded: TicketXLocation[] = [];
+        snapshot.forEach((d) => {
+          loaded.push({ ...(d.data() as TicketXLocation), id: d.id });
+        });
+        if (loaded.length > 0) liveLocations = loaded;
+      }
+    });
+
+    onSnapshot(collection(db, 'events'), (snapshot) => {
+      if (!snapshot.empty) {
+        const loaded: TicketXEvent[] = [];
+        snapshot.forEach((d) => {
+          loaded.push({ ...(d.data() as TicketXEvent), id: d.id });
+        });
+        if (loaded.length > 0) liveEvents = loaded;
+      }
+    });
+  } catch (err) {
+    console.warn('Live Firestore listener initialization deferred:', err);
+  }
+}
+
 export function getRowLabel(index: number): string {
   let label = '';
   let i = index;
@@ -49,21 +117,21 @@ export function sortShowtimes(timeList: string[]): string[] {
 }
 
 export function getLocationById(locationId: string): TicketXLocation | undefined {
-  return locations.find((l) => l.id === locationId);
+  return liveLocations.find((l) => l.id === locationId);
 }
 
 /**
  * Derive events for a location.
  */
 export function getEventsForLocation(locationId: string): TicketXEvent[] {
-  return events.filter((e) => e.cityId === locationId);
+  return liveEvents.filter((e) => e.cityId === locationId);
 }
 
 /**
  * Derive movies for a location based on shows.
  */
 export function getMoviesForLocation(locationId: string, date?: string): (TicketXMovie & { theatreCount: number })[] {
-  let locationShows = shows.filter((s) => s.locationId === locationId);
+  let locationShows = liveShows.filter((s) => s.locationId === locationId);
   if (date) {
     locationShows = locationShows.filter((s) => s.date === date);
   }
@@ -78,7 +146,7 @@ export function getMoviesForLocation(locationId: string, date?: string): (Ticket
 
   const result: (TicketXMovie & { theatreCount: number })[] = [];
   movieMap.forEach((theatreSet, movieId) => {
-    const movieObj = movies.find((m) => m.id === movieId);
+    const movieObj = liveMovies.find((m) => m.id === movieId);
     if (movieObj) {
       result.push({
         ...movieObj,
@@ -89,8 +157,8 @@ export function getMoviesForLocation(locationId: string, date?: string): (Ticket
 
   // Fallback: If no location-specific shows are scheduled, present the full active catalogue with local cinema availability
   if (result.length === 0) {
-    const localTheatresCount = theatres.filter((t) => t.locationId === locationId).length;
-    return movies.map((m) => ({
+    const localTheatresCount = liveTheatres.filter((t) => t.locationId === locationId).length;
+    return liveMovies.map((m) => ({
       ...m,
       theatreCount: localTheatresCount > 0 ? localTheatresCount : 1,
     }));
@@ -105,11 +173,20 @@ export function getMoviesForLocation(locationId: string, date?: string): (Ticket
 export function getTheatresForMovie(
   movieId: string,
   locationId: string,
-  date?: string
+  date?: string,
+  language?: string
 ): { theatre: TicketXTheatre; shows: TicketXShow[] }[] {
-  let matchedShows = shows.filter((s) => s.movieId === movieId && s.locationId === locationId);
+  const movieObj = liveMovies.find((m) => m.id === movieId);
+  let matchedShows = liveShows.filter((s) => s.movieId === movieId && s.locationId === locationId);
   if (date) {
     matchedShows = matchedShows.filter((s) => s.date === date);
+  }
+  if (language) {
+    const langLower = language.toLowerCase();
+    matchedShows = matchedShows.filter((s) => {
+      const showLang = s.language || (movieObj?.languages && movieObj.languages.length === 1 ? movieObj.languages[0] : (movieObj?.language || 'Telugu'));
+      return showLang.toLowerCase() === langLower;
+    });
   }
 
   const theatreMap = new Map<string, TicketXShow[]>();
@@ -122,7 +199,7 @@ export function getTheatresForMovie(
 
   const result: { theatre: TicketXTheatre; shows: TicketXShow[] }[] = [];
   theatreMap.forEach((tShows, theatreId) => {
-    const theatreObj = theatres.find((t) => t.id === theatreId);
+    const theatreObj = liveTheatres.find((t) => t.id === theatreId);
     if (theatreObj) {
       const sortedShows = [...tShows].sort((a, b) => parse12HourTime(a.time) - parse12HourTime(b.time));
       result.push({ theatre: theatreObj, shows: sortedShows });
@@ -139,7 +216,7 @@ export function getMoviesForTheatre(
   theatreId: string,
   date?: string
 ): { movie: TicketXMovie; shows: TicketXShow[] }[] {
-  let matchedShows = shows.filter((s) => s.theatreId === theatreId);
+  let matchedShows = liveShows.filter((s) => s.theatreId === theatreId);
   if (date) {
     matchedShows = matchedShows.filter((s) => s.date === date);
   }
@@ -154,7 +231,7 @@ export function getMoviesForTheatre(
 
   const result: { movie: TicketXMovie; shows: TicketXShow[] }[] = [];
   movieMap.forEach((mShows, movieId) => {
-    const movieObj = movies.find((m) => m.id === movieId);
+    const movieObj = liveMovies.find((m) => m.id === movieId);
     if (movieObj) {
       const sortedShows = [...mShows].sort((a, b) => parse12HourTime(a.time) - parse12HourTime(b.time));
       result.push({ movie: movieObj, shows: sortedShows });
@@ -168,7 +245,7 @@ export function getMoviesForTheatre(
  * Get all theatres for a location.
  */
 export function getTheatresForLocation(locationId: string): TicketXTheatre[] {
-  return theatres.filter((t) => t.locationId === locationId);
+  return liveTheatres.filter((t) => t.locationId === locationId);
 }
 
 /**
@@ -176,7 +253,7 @@ export function getTheatresForLocation(locationId: string): TicketXTheatre[] {
  */
 export function getAvailableDatesForLocation(locationId: string): string[] {
   const datesSet = new Set<string>();
-  shows.forEach((s) => {
+  liveShows.forEach((s) => {
     if (s.locationId === locationId) {
       datesSet.add(s.date);
     }
@@ -186,10 +263,11 @@ export function getAvailableDatesForLocation(locationId: string): string[] {
 
 export function getAvailableDatesForMovie(movieId: string, locationId: string): string[] {
   const datesSet = new Set<string>();
-  shows.forEach((s) => {
+  liveShows.forEach((s) => {
     if (s.movieId === movieId && s.locationId === locationId) {
       datesSet.add(s.date);
     }
   });
   return Array.from(datesSet).sort();
 }
+

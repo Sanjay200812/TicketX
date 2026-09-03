@@ -61,13 +61,14 @@ export default function PartnersPage() {
             </p>
           </div>
 
-          <Link href="/register" className="inline-block">
+          <Link href="/partners/register-venue" className="inline-block">
             <Button className="h-14 px-8 rounded-2xl font-extrabold text-base bg-amber-500 hover:bg-amber-600 text-black shadow-[0_0_25px_rgba(245,158,11,0.4)] flex items-center gap-2">
               <span>REGISTER YOUR HALL</span>
               <ArrowRight className="w-5 h-5" />
             </Button>
           </Link>
         </div>
+
       </div>
     </div>
   );

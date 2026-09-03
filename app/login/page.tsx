@@ -4,816 +4,595 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, CheckCircle2, AlertCircle, ArrowRight, Smartphone, UserPlus, User } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useAuth, validateIndianPhone } from '@/context/AuthContext';
-import { VerificationCodeInput } from '@/components/auth/VerificationCodeInput';
-import { BouncingTicketLoader } from '@/components/shared/BouncingTicketLoader';
+import {
+  ArrowRight,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+  Edit3,
+  User,
+  Calendar,
+  Sparkles,
+} from 'lucide-react';
 
-function LoginForm() {
+import { RecaptchaVerifier, ConfirmationResult } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { useAuth, validateIndianPhone, formatIndianPhone } from '@/context/AuthContext';
+import { VerificationCodeInput } from '@/components/auth/VerificationCodeInput';
+
+function CustomerLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectPath = searchParams.get('redirect') || '/';
 
-  const {
-    user,
-    loginWithEmail,
-    loginWithGoogle,
-    resolvePostOtpAccount,
-    checkAccountRegistered,
-    sendForgotPasswordOtp,
-    verifyForgotPasswordOtp,
-    isPasswordLocked,
-    cooldownSeconds,
-  } = useAuth();
+  const { user, sendPhoneOtp, verifyPhoneOtp, completeCustomerOnboarding } = useAuth();
 
-  // Mode Selection: 'email' | 'phone' | 'email-otp' | 'forgot'
-  const [authMode, setAuthMode] = useState<'email' | 'phone' | 'email-otp' | 'forgot'>('email');
+  // Steps: 'phone' | 'otp' | 'onboarding'
+  const [step, setStep] = useState<'phone' | 'otp' | 'onboarding'>('phone');
 
-  // Refs for Keyboard Navigation (Requirements 1, 2)
-  const passwordRef = useRef<HTMLInputElement | null>(null);
-  const forgotNewPassRef = useRef<HTMLInputElement | null>(null);
-  const forgotConfirmPassRef = useRef<HTMLInputElement | null>(null);
-
-  // Form Field States
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-
-  // Phone OTP States
+  // Input states
   const [phone, setPhone] = useState('');
-  const [phoneOtpStep, setPhoneOtpStep] = useState<'input' | 'otp' | 'new-user-name'>('input');
-  const [newUserName, setNewUserName] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
 
-  // Email OTP States
-  const [otpEmail, setOtpEmail] = useState('');
-  const [emailOtpStep, setEmailOtpStep] = useState<'input' | 'otp' | 'new-user-name'>('input');
+  // Onboarding states
+  const [fullName, setFullName] = useState('');
+  const [dob, setDob] = useState('');
+  const [gender, setGender] = useState('Prefer not to say');
 
-  // Forgot Password States
-  const [forgotStep, setForgotStep] = useState<'email' | 'otp' | 'new-pass'>('email');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = useState('');
-
-  // UI Feedback States
+  // UI Feedback
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showSignupPrompt, setShowSignupPrompt] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [resendTimer, setResendTimer] = useState(30);
+  const [canResend, setCanResend] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
-  // Navigate away immediately if authenticated
+  const phoneInputRef = useRef<HTMLInputElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
+
+  // If already authenticated and not in onboarding, redirect
   useEffect(() => {
-    if (user) {
+    if (user && step !== 'onboarding') {
       router.replace(redirectPath);
     }
-  }, [user, router, redirectPath]);
+  }, [user, step, router, redirectPath]);
 
-  // Clear all temporary auth state
-  const clearAllTempState = () => {
-    setEmail('');
-    setPassword('');
-    setPhone('');
-    setOtpEmail('');
-    setNewPassword('');
-    setConfirmNewPassword('');
-    setNewUserName('');
-    setError(null);
-    setShowSignupPrompt(false);
-    setSuccessMessage(null);
-    setLoading(false);
-    setPhoneOtpStep('input');
-    setEmailOtpStep('input');
-    setForgotStep('email');
-  };
+  // Focus phone on initial mount
+  useEffect(() => {
+    if (step === 'phone') {
+      phoneInputRef.current?.focus();
+    } else if (step === 'onboarding') {
+      nameInputRef.current?.focus();
+    }
+  }, [step]);
 
-  const switchAuthMode = (mode: 'email' | 'phone' | 'email-otp' | 'forgot') => {
-    setAuthMode(mode);
-    clearAllTempState();
-  };
+  // Resend Countdown Timer
+  useEffect(() => {
+    if (step !== 'otp' || resendTimer <= 0) return;
+    const interval = setInterval(() => {
+      setResendTimer((prev) => {
+        if (prev <= 1) {
+          setCanResend(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [step, resendTimer]);
 
-  const handleAuthSuccess = () => {
-    clearAllTempState();
-    router.replace(redirectPath);
-  };
+  // Clean reCAPTCHA on unmount
+  useEffect(() => {
+    return () => {
+      if (recaptchaVerifierRef.current) {
+        try {
+          recaptchaVerifierRef.current.clear();
+        } catch {}
+      }
+    };
+  }, []);
 
-  // Keyboard navigation: Email Enter -> focus Password (Requirement 2)
-  const handleEmailKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      passwordRef.current?.focus();
+  const getOrCreateRecaptchaVerifier = () => {
+    if (typeof window === 'undefined') return null;
+
+    if (recaptchaVerifierRef.current) {
+      try {
+        recaptchaVerifierRef.current.clear();
+      } catch {}
+    }
+
+    try {
+      const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        size: 'invisible',
+        callback: () => {},
+        'expired-callback': () => {
+          setError('Security verification expired. Please resend the code.');
+        },
+      });
+      recaptchaVerifierRef.current = verifier;
+      return verifier;
+    } catch (err) {
+      console.error('RecaptchaVerifier init error:', err);
+      return null;
     }
   };
 
-  // 1. EMAIL + PASSWORD SIGN IN
-  const isPasswordValid = password.length >= 6;
-
-  const handleEmailSubmit = async (e?: React.FormEvent) => {
+  // Step 1: Send OTP
+  const handleSendOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setError(null);
-    setShowSignupPrompt(false);
 
-    if (isPasswordLocked) {
-      setError(`Too many failed attempts. Try again in ${cooldownSeconds}s.`);
-      return;
-    }
-
-    if (!isPasswordValid) {
-      setError('Password must be at least 6 characters.');
+    const clean = phone.replace(/\D/g, '');
+    if (!validateIndianPhone(clean)) {
+      setError('Enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.');
       return;
     }
 
     setLoading(true);
 
-    const isRegistered = await checkAccountRegistered(email, 'email');
-    if (!isRegistered) {
+    try {
+      const verifier = getOrCreateRecaptchaVerifier();
+      if (!verifier) {
+        setError('Could not initialize security verification. Please refresh.');
+        setLoading(false);
+        return;
+      }
+
+      const res = await sendPhoneOtp(clean, verifier);
+      if (!res.success || !res.confirmationResult) {
+        setError(res.error || 'Failed to send OTP.');
+        setLoading(false);
+        return;
+      }
+
+      setConfirmationResult(res.confirmationResult);
+      setStep('otp');
+      setResendTimer(30);
+      setCanResend(false);
+      setOtpCode('');
       setLoading(false);
-      setError('No account found. Sign up first.');
-      setShowSignupPrompt(true);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to send OTP. Please try again.';
+      setError(msg);
+      setLoading(false);
+    }
+  };
+
+  // Step 2: Verify OTP
+  const handleVerifyOtp = async (codeToVerify?: string) => {
+    const code = codeToVerify || otpCode;
+    setError(null);
+
+    if (code.length !== 6) {
+      setError('Please enter the 6-digit verification code.');
       return;
     }
 
-    const res = await loginWithEmail(email, password);
-    setLoading(false);
+    if (!confirmationResult) {
+      setError('Session expired. Please request a new OTP.');
+      setStep('phone');
+      return;
+    }
 
-    if (!res.success) {
-      setError(res.error || 'Sign in failed.');
-      if (res.error?.includes('No account found')) {
-        setShowSignupPrompt(true);
+    setLoading(true);
+
+    try {
+      const res = await verifyPhoneOtp(confirmationResult, code);
+      if (!res.success) {
+        setError(res.error || 'Invalid verification code.');
+        setLoading(false);
+        return;
       }
-    } else {
-      handleAuthSuccess();
-    }
-  };
 
-  // 2. PHONE NUMBER SIGN IN (Requirements 3, 10, 11, 12)
-  const isPhoneValid = validateIndianPhone(phone);
+      if (res.isNewUser) {
+        // First-time customer onboarding
+        setLoading(false);
+        setStep('onboarding');
+      } else {
+        // Existing user verified! Record login activity
+        if (auth.currentUser) {
+          fetch('/api/auth/record-login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              uid: auth.currentUser.uid,
+              phone: auth.currentUser.phoneNumber || phone,
+              isNewUser: false,
+              userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+            }),
+          }).catch(() => {});
+        }
 
-  const handleSendPhoneOtp = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    setError(null);
-
-    if (!isPhoneValid) {
-      setError('Enter a valid number');
-      return;
-    }
-
-    setPhoneOtpStep('otp');
-  };
-
-  const handlePhoneOtpVerified = async () => {
-    setError(null);
-    const res = await resolvePostOtpAccount({ identifier: phone, type: 'phone' });
-    if (res.success) {
-      setError(null);
-      handleAuthSuccess();
-    } else {
-      setError(res.error || 'Phone login failed.');
-    }
-  };
-
-  const handleCreatePhoneAccount = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newUserName.trim()) {
-      setError('Please enter your name.');
-      return;
-    }
-
-    setLoading(true);
-    const res = await resolvePostOtpAccount({
-      identifier: phone,
-      type: 'phone',
-      name: newUserName.trim(),
-    });
-    setLoading(false);
-
-    if (res.success) {
-      handleAuthSuccess();
-    } else {
-      setError(res.error || 'Failed to create account.');
-    }
-  };
-
-  // 3. EMAIL OTP SIGN IN
-  const handleSendEmailOtp = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    setError(null);
-
-    if (!otpEmail || !otpEmail.includes('@')) {
-      setError('Enter a valid email address');
-      return;
-    }
-
-    setEmailOtpStep('otp');
-  };
-
-  const handleEmailOtpVerified = async () => {
-    setLoading(true);
-    const res = await resolvePostOtpAccount({ identifier: otpEmail, type: 'email' });
-    setLoading(false);
-
-    if (res.isNewUser) {
-      setEmailOtpStep('new-user-name');
-    } else if (res.success) {
-      handleAuthSuccess();
-    } else {
-      setError(res.error || 'Email OTP login failed.');
-    }
-  };
-
-  const handleCreateEmailOtpAccount = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newUserName.trim()) {
-      setError('Please enter your name.');
-      return;
-    }
-
-    setLoading(true);
-    const res = await resolvePostOtpAccount({
-      identifier: otpEmail,
-      type: 'email',
-      name: newUserName.trim(),
-    });
-    setLoading(false);
-
-    if (res.success) {
-      handleAuthSuccess();
-    } else {
-      setError(res.error || 'Failed to create account.');
-    }
-  };
-
-  // 4. GOOGLE SIGN IN
-  const handleGoogleSubmit = async () => {
-    setError(null);
-    setShowSignupPrompt(false);
-    setLoading(true);
-    const res = await loginWithGoogle();
-    setLoading(false);
-
-    if (res.success) {
-      handleAuthSuccess();
-    } else {
-      setError(res.error || 'Unable to sign in with Google. Please try again.');
-    }
-  };
-
-  // 5. FORGOT PASSWORD FLOW
-  const handleSendForgotOtp = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    setError(null);
-    setLoading(true);
-
-    const res = await sendForgotPasswordOtp(email);
-    setLoading(false);
-
-    if (!res.success) {
-      setError(res.error || 'Failed to send OTP.');
-      if (res.error?.includes('No account found')) {
-        setShowSignupPrompt(true);
+        setIsSuccess(true);
+        setTimeout(() => {
+          router.replace(redirectPath);
+        }, 500);
       }
-    } else {
-      setForgotStep('otp');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Verification failed. Please try again.';
+      setError(msg);
+      setLoading(false);
     }
   };
 
-  const handleForgotOtpVerified = async () => {
-    setError(null);
-    setForgotStep('new-pass');
-    setTimeout(() => forgotNewPassRef.current?.focus(), 100);
-  };
-
-  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+  // Step 3: Complete Onboarding
+  const handleCompleteOnboarding = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters.');
-      return;
-    }
-
-    if (newPassword !== confirmNewPassword) {
-      setError('Passwords do not match.');
+    if (!fullName.trim()) {
+      setError('Please enter your name to complete your profile.');
       return;
     }
 
     setLoading(true);
-    const res = await verifyForgotPasswordOtp(email, '123456', newPassword);
-    setLoading(false);
 
-    if (!res.success) {
-      setError(res.error || 'Password reset failed.');
-    } else {
-      setSuccessMessage('Password reset successfully! Please sign in with your new password.');
-      switchAuthMode('email');
+    try {
+      const res = await completeCustomerOnboarding({
+        name: fullName.trim(),
+        dob: dob || undefined,
+        gender: gender || undefined,
+      });
+
+      if (!res.success) {
+        setError(res.error || 'Failed to complete registration.');
+        setLoading(false);
+        return;
+      }
+
+      // Record first-time login activity
+      if (auth.currentUser) {
+        fetch('/api/auth/record-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            uid: auth.currentUser.uid,
+            name: fullName.trim(),
+            phone: auth.currentUser.phoneNumber || phone,
+            dob,
+            gender,
+            isNewUser: true,
+            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+          }),
+        }).catch(() => {});
+      }
+
+      setIsSuccess(true);
+      setTimeout(() => {
+        router.replace(redirectPath);
+      }, 500);
+
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Could not complete onboarding.';
+      setError(msg);
+      setLoading(false);
     }
   };
+
 
   return (
-    <div className="w-full max-w-md bg-secondary/40 border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl relative z-10 backdrop-blur-xl space-y-6">
-      {/* Branding Header */}
-      <div className="text-center space-y-1">
-        <Link href="/" className="inline-block mb-2">
-          <span className="text-3xl font-black font-heading tracking-widest text-white">
+    <div className="min-h-screen pt-24 pb-20 px-4 flex items-center justify-center relative overflow-hidden bg-[#0a0a0c]">
+      {/* Ambient background glows */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-primary/15 rounded-full blur-[160px] pointer-events-none" />
+      <div className="absolute -bottom-20 right-10 w-80 h-80 bg-rose-600/10 rounded-full blur-[120px] pointer-events-none" />
+
+      {/* Invisible reCAPTCHA container */}
+      <div id="recaptcha-container" />
+
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+        className="w-full max-w-md bg-[#12141a]/95 border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-2xl relative z-10 space-y-6"
+      >
+        {/* Brand Header */}
+        <div className="text-center space-y-1.5">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-primary/15 border border-primary/30 text-primary font-black mb-1 shadow-inner shadow-primary/20">
+            TX
+          </div>
+          <h1 className="text-3xl font-black font-heading tracking-wider text-white">
             TICKET<span className="text-primary">X</span>
-          </span>
-        </Link>
-        <h1 className="text-xl font-bold font-heading text-white">
-          {authMode === 'forgot' ? 'Reset Password' : 'Welcome Back'}
-        </h1>
-        <p className="text-xs text-muted-foreground">
-          {authMode === 'forgot'
-            ? 'Enter your registered email to receive an OTP'
-            : 'Sign in to access your digital tickets & bookings'}
-        </p>
-      </div>
+          </h1>
+          <p className="text-xs font-bold text-gray-200">
+            Welcome to TicketX
+          </p>
+          <p className="text-[11px] text-gray-400">
+            Book Movies. Discover Events. Own Your Experience.
+          </p>
+        </div>
 
-      {/* Global Error Banner */}
-      <AnimatePresence>
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="p-4 rounded-2xl bg-destructive/20 border border-destructive/40 text-destructive text-xs font-bold space-y-2"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{error}</span>
-              </div>
-            </div>
-
-            {showSignupPrompt && (
-              <div className="pt-2 border-t border-destructive/30 flex justify-end">
-                <Link
-                  href="/register"
-                  className="px-3.5 py-1.5 rounded-xl bg-primary text-white text-xs font-extrabold flex items-center gap-1 hover:bg-primary/90 transition-colors shadow-md"
-                >
-                  <UserPlus className="w-3.5 h-3.5" /> Sign Up Now →
-                </Link>
-              </div>
-            )}
-          </motion.div>
-        )}
-
-        {successMessage && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="p-4 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-bold flex items-center gap-2"
-          >
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>{successMessage}</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* FORGOT PASSWORD FORM */}
-      {authMode === 'forgot' && (
-        <div className="space-y-4">
-          {forgotStep === 'email' && (
-            <form onSubmit={handleSendForgotOtp} className="space-y-4">
-              <div>
-                <label className="text-xs font-semibold text-gray-300 block mb-1.5">Registered Email</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    type="email"
-                    autoComplete="email"
-                    enterKeyHint="next"
-                    required
-                    placeholder="name@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-9 bg-black/40 border-white/10 text-white text-sm"
-                  />
-                </div>
-              </div>
-
-              <Button type="submit" disabled={loading} className="w-full rounded-xl font-bold py-5 gap-2">
-                {loading ? 'Sending OTP...' : 'Send Reset OTP'}
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </form>
+        {/* Global Error Banner */}
+        <AnimatePresence mode="wait">
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.2 }}
+              className="p-3.5 rounded-xl bg-red-500/15 border border-red-500/30 text-red-400 text-xs font-semibold flex items-center gap-2.5 shadow-lg shadow-red-500/10"
+            >
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+              <span>{error}</span>
+            </motion.div>
           )}
+        </AnimatePresence>
 
-          {forgotStep === 'otp' && (
-            <VerificationCodeInput
-              recipient={email}
-              recipientType="email"
-              autoFocus
-              onVerified={handleForgotOtpVerified}
-              onResendOtp={() => sendForgotPasswordOtp(email)}
-              onMaxAttemptsReached={() => setForgotStep('email')}
-            />
+        {/* Success Banner */}
+        <AnimatePresence mode="wait">
+          {isSuccess && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="p-4 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/10"
+            >
+              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+              <span>Verified! Redirecting to TicketX...</span>
+            </motion.div>
           )}
+        </AnimatePresence>
 
-          {forgotStep === 'new-pass' && (
-            <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
-              <div>
-                <label className="text-xs font-semibold text-gray-300 block mb-1.5">New Password (min 6 chars)</label>
-                <Input
-                  ref={forgotNewPassRef}
-                  type="password"
-                  autoComplete="new-password"
-                  enterKeyHint="next"
+        {/* STEP 1: MOBILE NUMBER INPUT */}
+        {step === 'phone' && (
+          <motion.form
+            key="phone-step"
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 10 }}
+            onSubmit={handleSendOtp}
+            className="space-y-4"
+          >
+            <div>
+              <label className="text-xs font-bold text-gray-300 block mb-1.5 font-mono">
+                Mobile Number
+              </label>
+              <div className="relative flex items-center bg-black/50 border border-white/10 rounded-xl overflow-hidden focus-within:border-primary transition-all">
+                <span className="px-3.5 py-3 text-xs font-mono font-bold text-gray-400 bg-white/5 border-r border-white/10 select-none">
+                  +91
+                </span>
+                <input
+                  ref={phoneInputRef}
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={10}
                   required
-                  placeholder="••••••••"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      forgotConfirmPassRef.current?.focus();
-                    }
+                  value={phone}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setPhone(raw);
+                    if (error) setError(null);
                   }}
-                  className="bg-black/40 border-white/10 text-white text-sm"
+                  placeholder="10-digit mobile number"
+                  className="w-full px-3.5 py-3 bg-transparent text-sm text-white placeholder:text-gray-600 outline-none font-mono tracking-wider"
                 />
               </div>
-
-              <div>
-                <label className="text-xs font-semibold text-gray-300 block mb-1.5">Confirm New Password</label>
-                <Input
-                  ref={forgotConfirmPassRef}
-                  type="password"
-                  autoComplete="new-password"
-                  enterKeyHint="done"
-                  required
-                  placeholder="••••••••"
-                  value={confirmNewPassword}
-                  onChange={(e) => setConfirmNewPassword(e.target.value)}
-                  className="bg-black/40 border-white/10 text-white text-sm"
-                />
-              </div>
-
-              <Button type="submit" disabled={loading} className="w-full rounded-xl font-bold py-5">
-                {loading ? 'Updating Password...' : 'Reset Password'}
-              </Button>
-            </form>
-          )}
-
-          <div className="text-center pt-2">
-            <button
-              type="button"
-              onClick={() => switchAuthMode('email')}
-              className="text-xs text-primary hover:underline font-semibold"
-            >
-              ← Back to Sign In
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 1. EMAIL + PASSWORD SIGN IN (Keyboard-first: Requirements 1, 2) */}
-      {authMode === 'email' && (
-        <form onSubmit={handleEmailSubmit} className="space-y-4">
-          <div>
-            <label className="text-xs font-semibold text-gray-300 block mb-1.5">Email Address</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                type="email"
-                autoComplete="email"
-                enterKeyHint="next"
-                required
-                placeholder="name@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                onKeyDown={handleEmailKeyDown}
-                className="pl-9 bg-black/40 border-white/10 text-white text-sm"
-              />
-            </div>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-semibold text-gray-300">Password</label>
-              <button
-                type="button"
-                onClick={() => switchAuthMode('forgot')}
-                className="text-xs text-primary hover:underline font-medium"
-              >
-                Forgot Password?
-              </button>
-            </div>
-
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                ref={passwordRef}
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                enterKeyHint="done"
-                required
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pl-9 pr-10 bg-black/40 border-white/10 text-white text-sm"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-
-            {password.length > 0 && !isPasswordValid && (
-              <p className="text-[11px] text-amber-300 font-mono mt-1.5 font-bold">
-                Password must be at least 6 characters.
+              <p className="text-[10px] text-gray-500 mt-1 font-mono">
+                We will send a 6-digit OTP for instant login.
               </p>
-            )}
-          </div>
-
-          <Button
-            type="submit"
-            disabled={loading || isPasswordLocked}
-            className="w-full rounded-xl font-bold py-5 gap-2 mt-2"
-          >
-            {loading ? 'Signing In...' : isPasswordLocked ? `Locked (${cooldownSeconds}s)` : 'Sign In'}
-            <ArrowRight className="w-4 h-4" />
-          </Button>
-        </form>
-      )}
-
-      {/* 2. PHONE NUMBER SIGN IN */}
-      {authMode === 'phone' && (
-        <div className="space-y-4">
-          <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider font-mono">Phone Number</h3>
-
-          {phoneOtpStep === 'input' ? (
-            <form onSubmit={handleSendPhoneOtp} className="space-y-4">
-              <div>
-                <label className="text-xs font-semibold text-gray-300 block mb-1.5">Mobile Phone (+91)</label>
-                <div className="flex gap-2.5">
-                  <span className="px-3.5 py-2.5 rounded-xl bg-black/50 border border-white/15 text-sm font-bold text-gray-200 flex items-center shrink-0 font-mono">
-                    +91
-                  </span>
-                  <Input
-                    type="tel"
-                    inputMode="numeric"
-                    autoComplete="tel"
-                    enterKeyHint="next"
-                    maxLength={10}
-                    required
-                    placeholder="9876543210"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                    className="bg-black/40 border-white/10 text-white text-sm tracking-wider font-mono"
-                  />
-                </div>
-              </div>
-
-              <Button type="submit" disabled={!isPhoneValid} className="w-full rounded-xl font-bold py-5 gap-2">
-                Send OTP <ArrowRight className="w-4 h-4" />
-              </Button>
-            </form>
-          ) : phoneOtpStep === 'otp' ? (
-            <VerificationCodeInput
-              recipient={phone}
-              recipientType="phone"
-              autoFocus
-              onVerified={handlePhoneOtpVerified}
-              onResendOtp={() => {}}
-              onMaxAttemptsReached={() => setPhoneOtpStep('input')}
-            />
-          ) : (
-            loading ? (
-              <BouncingTicketLoader message="Creating your TicketX digital pass..." />
-            ) : (
-              <form onSubmit={handleCreatePhoneAccount} className="space-y-4">
-                <div className="p-3.5 rounded-2xl bg-primary/10 border border-primary/20 text-center space-y-1">
-                  <p className="text-xs font-bold text-primary font-heading uppercase tracking-wider">
-                    You&apos;re new to TicketX
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    Enter your name to complete your digital pass profile.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-gray-300 block mb-1.5">Full Name</label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      type="text"
-                      autoComplete="name"
-                      enterKeyHint="done"
-                      required
-                      placeholder="John Doe"
-                      value={newUserName}
-                      onChange={(e) => setNewUserName(e.target.value)}
-                      className="pl-9 bg-black/40 border-white/15 text-white text-sm"
-                    />
-                  </div>
-                </div>
-
-                <Button type="submit" disabled={!newUserName.trim() || loading} className="w-full rounded-xl font-bold py-5 gap-2">
-                  Continue <ArrowRight className="w-4 h-4" />
-                </Button>
-              </form>
-            )
-          )}
-
-          <div className="text-center pt-2">
-            <button
-              type="button"
-              onClick={() => switchAuthMode('email')}
-              className="text-xs text-primary hover:underline font-semibold"
-            >
-              ← Back to Email Sign In
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 3. EMAIL OTP SIGN IN */}
-      {authMode === 'email-otp' && (
-        <div className="space-y-4">
-          <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider font-mono">Email OTP</h3>
-
-          {emailOtpStep === 'input' ? (
-            <form onSubmit={handleSendEmailOtp} className="space-y-4">
-              <div>
-                <label className="text-xs font-semibold text-gray-300 block mb-1.5">Registered Email Address</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    type="email"
-                    autoComplete="email"
-                    enterKeyHint="next"
-                    required
-                    placeholder="name@example.com"
-                    value={otpEmail}
-                    onChange={(e) => setOtpEmail(e.target.value)}
-                    className="pl-9 bg-black/40 border-white/10 text-white text-sm"
-                  />
-                </div>
-              </div>
-
-              <Button type="submit" disabled={!otpEmail} className="w-full rounded-xl font-bold py-5 gap-2">
-                Send OTP <ArrowRight className="w-4 h-4" />
-              </Button>
-            </form>
-          ) : emailOtpStep === 'otp' ? (
-            <VerificationCodeInput
-              recipient={otpEmail}
-              recipientType="email"
-              autoFocus
-              onVerified={handleEmailOtpVerified}
-              onResendOtp={() => {}}
-              onMaxAttemptsReached={() => setEmailOtpStep('input')}
-            />
-          ) : (
-            <form onSubmit={handleCreateEmailOtpAccount} className="space-y-4">
-              <div className="p-3.5 rounded-2xl bg-primary/10 border border-primary/20 text-center space-y-1">
-                <p className="text-xs font-bold text-primary font-heading uppercase tracking-wider">
-                  You&apos;re new to TicketX
-                </p>
-                <p className="text-[11px] text-muted-foreground">
-                  Enter your name to complete your digital pass profile.
-                </p>
-              </div>
-
-              <div>
-                <label className="text-xs font-semibold text-gray-300 block mb-1.5">Full Name</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    autoComplete="name"
-                    enterKeyHint="done"
-                    required
-                    placeholder="John Doe"
-                    value={newUserName}
-                    onChange={(e) => setNewUserName(e.target.value)}
-                    className="pl-9 bg-black/40 border-white/15 text-white text-sm"
-                  />
-                </div>
-              </div>
-
-              <Button type="submit" disabled={!newUserName.trim() || loading} className="w-full rounded-xl font-bold py-5 gap-2">
-                {loading ? 'Creating Account...' : 'Continue'}
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </form>
-          )}
-
-          <div className="text-center pt-2">
-            <button
-              type="button"
-              onClick={() => switchAuthMode('email')}
-              className="text-xs text-primary hover:underline font-semibold"
-            >
-              ← Back to Email Sign In
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* STANDALONE GOOGLE LOGIN & OTHER SIGN-IN OPTIONS */}
-      {authMode !== 'forgot' && (
-        <>
-          <div className="relative my-4 text-center">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-white/10" />
             </div>
-            <span className="relative px-3 bg-[#16161b] text-[11px] font-bold text-muted-foreground uppercase tracking-widest font-mono">
-              OR
-            </span>
-          </div>
 
-          {/* Google Login Button */}
-          <button
-            type="button"
-            onClick={handleGoogleSubmit}
-            disabled={loading}
-            className="w-full py-3.5 px-4 rounded-xl bg-white text-black hover:bg-gray-100 font-bold text-xs transition-colors flex items-center justify-center gap-2.5 shadow-md"
+            <motion.button
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+              type="submit"
+              disabled={loading || phone.length < 10}
+              className="w-full py-3.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-black text-xs tracking-wider uppercase flex items-center justify-center gap-2 shadow-lg shadow-primary/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>SENDING OTP...</span>
+                </>
+              ) : (
+                <>
+                  <span>SEND OTP</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </motion.button>
+          </motion.form>
+        )}
+
+        {/* STEP 2: 6-DIGIT OTP VERIFICATION */}
+        {step === 'otp' && (
+          <motion.div
+            key="otp-step"
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -10 }}
+            className="space-y-5"
           >
-            <svg className="w-4 h-4" viewBox="0 0 24 24">
-              <path
-                fill="#4285F4"
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-              />
-              <path
-                fill="#EA4335"
-                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-              />
-            </svg>
-            <span>Continue with Google</span>
-          </button>
-
-          {/* Other Sign-In Options */}
-          <div className="space-y-2 pt-2">
-            <label className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground block text-center font-mono">
-              Other Sign-In Options
-            </label>
-
-            <div className="grid grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                onClick={() => switchAuthMode('phone')}
-                className={`py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                  authMode === 'phone'
-                    ? 'bg-primary/20 border-primary text-primary'
-                    : 'bg-black/30 border-white/10 text-gray-300 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                <Smartphone className="w-3.5 h-3.5 text-primary" />
-                <span>Phone Number</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => switchAuthMode('email-otp')}
-                className={`py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                  authMode === 'email-otp'
-                    ? 'bg-primary/20 border-primary text-primary'
-                    : 'bg-black/30 border-white/10 text-gray-300 hover:text-white hover:bg-white/5'
-                }`}
-              >
-                <Mail className="w-3.5 h-3.5 text-amber-400" />
-                <span>Email OTP</span>
-              </button>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-gray-300 font-mono">
+                  Verification Code
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep('phone');
+                    setError(null);
+                  }}
+                  className="text-[11px] text-primary hover:underline flex items-center gap-1 font-bold"
+                >
+                  <Edit3 className="w-3 h-3" />
+                  <span>Change Number</span>
+                </button>
+              </div>
+              <p className="text-[11px] text-gray-400 font-mono">
+                Code sent to <span className="text-white font-bold">{formatIndianPhone(phone)}</span>
+              </p>
             </div>
-          </div>
 
-          {/* Sign Up Link */}
-          <div className="text-center pt-4 border-t border-white/10">
-            <p className="text-xs text-muted-foreground">
-              Don&apos;t have an account?{' '}
-              <Link href="/register" className="text-primary hover:underline font-bold">
-                Sign Up
-              </Link>
-            </p>
-          </div>
-        </>
-      )}
+            {/* 6-box OTP component */}
+            <VerificationCodeInput
+              length={6}
+              value={otpCode}
+              onChange={(val) => {
+                setOtpCode(val);
+                if (error) setError(null);
+              }}
+              onComplete={(completedCode) => {
+                handleVerifyOtp(completedCode);
+              }}
+              disabled={loading || isSuccess}
+              hasError={Boolean(error)}
+            />
+
+            {/* Verify & Continue Button */}
+            <motion.button
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+              type="button"
+              onClick={() => handleVerifyOtp()}
+              disabled={loading || otpCode.length !== 6 || isSuccess}
+              className="w-full py-3.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-black text-xs tracking-wider uppercase flex items-center justify-center gap-2 shadow-lg shadow-primary/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>VERIFYING...</span>
+                </>
+              ) : (
+                <>
+                  <span>VERIFY &amp; CONTINUE</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </motion.button>
+
+            {/* Resend OTP Timer / Action */}
+            <div className="text-center pt-1">
+              {canResend ? (
+                <button
+                  type="button"
+                  onClick={() => handleSendOtp()}
+                  disabled={loading}
+                  className="text-xs text-primary hover:underline font-bold transition-colors"
+                >
+                  Resend OTP
+                </button>
+              ) : (
+                <p className="text-[11px] text-gray-500 font-mono">
+                  Resend OTP in <span className="text-gray-300 font-bold">{resendTimer}s</span>
+                </p>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* STEP 3: FIRST-TIME USER ONBOARDING */}
+        {step === 'onboarding' && (
+          <motion.form
+            key="onboarding-step"
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+            onSubmit={handleCompleteOnboarding}
+            className="space-y-4"
+          >
+            <div className="p-3 rounded-2xl bg-primary/10 border border-primary/25 text-center space-y-1">
+              <div className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold text-primary uppercase">
+                <Sparkles className="w-3 h-3" />
+                <span>New TicketX Member</span>
+              </div>
+              <h2 className="text-base font-bold text-white font-heading">
+                What should we call you?
+              </h2>
+            </div>
+
+            {/* Full Name */}
+            <div>
+              <label className="text-xs font-bold text-gray-300 block mb-1 font-mono">
+                Full Name <span className="text-primary">*</span>
+              </label>
+              <div className="relative">
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  ref={nameInputRef}
+                  type="text"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Ashu Chinthapalli"
+                  className="w-full pl-10 pr-4 py-2.5 bg-black/50 border border-white/10 rounded-xl text-sm text-white placeholder:text-gray-600 outline-none focus:border-primary transition-all font-sans"
+                />
+              </div>
+            </div>
+
+            {/* Date of Birth (Optional) */}
+            <div>
+              <label className="text-xs font-bold text-gray-300 block mb-1 font-mono">
+                Date of Birth <span className="text-gray-500 text-[10px] font-normal">(Optional)</span>
+              </label>
+              <div className="relative">
+                <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="date"
+                  value={dob}
+                  onChange={(e) => setDob(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-black/50 border border-white/10 rounded-xl text-sm text-white placeholder:text-gray-600 outline-none focus:border-primary transition-all font-sans"
+                />
+              </div>
+            </div>
+
+            {/* Gender (Optional) */}
+            <div>
+              <label className="text-xs font-bold text-gray-300 block mb-1 font-mono">
+                Gender <span className="text-gray-500 text-[10px] font-normal">(Optional)</span>
+              </label>
+              <select
+                value={gender}
+                onChange={(e) => setGender(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-black/50 border border-white/10 rounded-xl text-sm text-white outline-none focus:border-primary transition-all font-sans"
+              >
+                <option value="Male" className="bg-[#12141a]">Male</option>
+                <option value="Female" className="bg-[#12141a]">Female</option>
+                <option value="Other" className="bg-[#12141a]">Other</option>
+                <option value="Prefer not to say" className="bg-[#12141a]">Prefer not to say</option>
+              </select>
+            </div>
+
+            <motion.button
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+              type="submit"
+              disabled={loading || !fullName.trim()}
+              className="w-full mt-2 py-3.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-black text-xs tracking-wider uppercase flex items-center justify-center gap-2 shadow-lg shadow-primary/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>CREATING PROFILE...</span>
+                </>
+              ) : (
+                <>
+                  <span>CONTINUE</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </motion.button>
+          </motion.form>
+        )}
+
+        {/* SUBTLE ADMIN LOGIN LINK AT ABSOLUTE BOTTOM */}
+        <div className="text-center pt-3 border-t border-white/5">
+          <Link
+            href="/admin-login"
+            className="text-[11px] text-gray-500 hover:text-primary transition-colors font-mono tracking-wide"
+          >
+            Administrative Access
+          </Link>
+        </div>
+      </motion.div>
     </div>
   );
 }
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen pt-24 pb-20 bg-background flex items-center justify-center px-4">
-      {/* Background glowing glow */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-full max-w-md h-[400px] bg-primary/15 blur-[120px] rounded-full pointer-events-none" />
-      <Suspense
-        fallback={
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        }
-      >
-        <LoginForm />
-      </Suspense>
-    </div>
+    <Suspense fallback={<div className="min-h-screen bg-[#0a0a0c]" />}>
+      <CustomerLoginForm />
+    </Suspense>
   );
 }

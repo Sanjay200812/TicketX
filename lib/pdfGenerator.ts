@@ -200,7 +200,7 @@ export async function downloadTicketPdf(booking: Booking, userName?: string): Pr
     <div class="content">
       <h1 class="movie-title">${booking.movieTitle}</h1>
       <div class="meta">
-        <span>UA16+</span> Telugu • <strong style="color:#e11d48;">2D</strong>
+        <span>UA16+</span> ${booking.movieLanguage || 'Telugu'} • <strong style="color:#e11d48;">2D</strong>
       </div>
       
       <div style="font-size:12px; font-weight:700; color:#fbbf24; margin-bottom:16px;">

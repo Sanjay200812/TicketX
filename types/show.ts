@@ -8,6 +8,8 @@ export interface TicketXShow {
   date: string;
   time: string;
 
+  language?: string;
+
   screenId?: string;
   screenName?: string;
   screen?: string;

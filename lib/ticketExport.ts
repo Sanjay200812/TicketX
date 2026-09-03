@@ -104,19 +104,23 @@ export async function generateTicketCanvasBlob(booking: Booking): Promise<Blob |
     ctx.fillStyle = '#ffffff';
     ctx.fillText('UA16+', 60, 225);
 
+    const langText = booking.movieLanguage || 'Telugu';
+    ctx.font = 'bold 16px monospace';
+    const langWidth = ctx.measureText(langText).width + 24;
+
     ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
     ctx.beginPath();
-    ctx.roundRect(134, 205, 84, 28, 6);
+    ctx.roundRect(134, 205, langWidth, 28, 6);
     ctx.fill();
     ctx.fillStyle = '#ffffff';
-    ctx.fillText('Telugu', 146, 225);
+    ctx.fillText(langText, 146, 225);
 
     ctx.fillStyle = 'rgba(216, 33, 50, 0.25)';
     ctx.beginPath();
-    ctx.roundRect(228, 205, 54, 28, 6);
+    ctx.roundRect(134 + langWidth + 10, 205, 54, 28, 6);
     ctx.fill();
     ctx.fillStyle = '#ff4d5e';
-    ctx.fillText('2D', 242, 225);
+    ctx.fillText('2D', 134 + langWidth + 24, 225);
 
     // Date & Showtime
     const dateFormatted = new Date(booking.date).toLocaleDateString('en-US', {

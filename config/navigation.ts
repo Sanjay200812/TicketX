@@ -80,7 +80,6 @@ export const SIDEBAR_NAV_SECTIONS: NavSection[] = [
     title: 'ACCOUNT',
     items: [
       { label: 'My Bookings', href: '/my-bookings', icon: 'Ticket' },
-      { label: 'Profile', href: '/profile', icon: 'User' },
       { label: 'Settings', href: '/settings', icon: 'Settings' },
     ],
   },

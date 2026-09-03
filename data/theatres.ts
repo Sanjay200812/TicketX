@@ -252,6 +252,16 @@ export const theatres: TicketXTheatre[] = [
     facilities: ["Push Back Seats", "Snack Bar"],
     format: ["2D"]
   },
+  {
+    id: "saradambha-theatre",
+    name: "Saradambha / Sharadamba Theatre",
+    locationId: "nrt",
+    area: "Main Road",
+    address: "Main Road, Narasaraopet",
+    status: "available",
+    facilities: ["Dolby Sound", "Air Conditioned", "Snack Bar"],
+    format: ["2D"]
+  },
 
   // ==========================================
   // 4. SATTENAPALLI THEATRES (2 Theatres)
