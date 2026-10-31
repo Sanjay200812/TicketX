@@ -20,6 +20,8 @@ interface TheatreSeatMapProps {
 
 export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, onRestoreUserHold }: TheatreSeatMapProps) {
   const { user } = useAuth();
+  const [zoom, setZoom] = useState(1);
+  const [preview, setPreview] = useState(false);
   const [realtimeBooked, setRealtimeBooked] = useState<Set<string>>(new Set());
   const [realtimeHeld, setRealtimeHeld] = useState<Set<string>>(new Set());
 
@@ -95,11 +97,20 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
       {/* Legend */}
       <SeatLegend sections={sections} />
 
-      {/* SEATING MAP SCROLL CONTAINER */}
+      <div className="flex flex-wrap items-center justify-center gap-3 mb-4">
+        <button type="button" className="px-4 py-2 border border-white/20 rounded-lg text-xs" onClick={() => setZoom(z => Math.max(.6, z - .1))} aria-label="Zoom out">−</button>
+        <span className="text-xs" aria-live="polite">{Math.round(zoom * 100)}%</span>
+        <button type="button" className="px-4 py-2 border border-white/20 rounded-lg text-xs" onClick={() => setZoom(z => Math.min(1.8, z + .1))} aria-label="Zoom in">+</button>
+        <button type="button" className="px-4 py-2 border border-white/20 rounded-lg text-xs" onClick={() => {setZoom(1);setPreview(false)}}>Reset view</button>
+        <button type="button" aria-pressed={preview} className="px-4 py-2 border border-white/20 rounded-lg text-xs" onClick={() => setPreview(p => !p)}>{preview ? 'Return to 2D seat selection' : 'View Theatre in 3D'}</button>
+      </div>
+      {preview && <p className="text-xs text-muted-foreground mb-4">Perspective preview of this same layout. Return to 2D to select seats.</p>}
+      {/* Scrollable viewport keeps oversized layouts inside the page. */}
       <div
         ref={scrollContainerRef}
         className="w-full space-y-10 overflow-x-auto hide-scrollbar py-4 border border-white/5 rounded-2xl p-4 bg-black/40"
       >
+        <div style={{zoom, transform: preview ? 'perspective(1000px) rotateX(35deg)' : undefined, transformOrigin:'center bottom', pointerEvents:preview?'none':undefined}}>
         {sections.map((section, secIdx) => {
           const secPrice = section.price !== null ? `₹${section.price}` : 'Price TBA';
 
@@ -142,7 +153,8 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
                             {group.seats.map((st) => {
                               const seatCode = st.id || `${rowGroup.row}${(st.number || 0).toString().padStart(2, '0')}`;
                               let currentStatus: SeatStatus = st.status;
-                              if (realtimeBooked.has(seatCode) || realtimeHeld.has(seatCode)) {
+                              if (realtimeHeld.has(seatCode)) currentStatus = 'held';
+                              if (realtimeBooked.has(seatCode)) {
                                 currentStatus = 'booked';
                               }
 
@@ -160,7 +172,7 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
                                   key={seatObj.id}
                                   seat={seatObj}
                                   isSelected={selectedSeats.some((s) => s.id === seatObj.id)}
-                                  onSelect={onSeatSelect}
+                                  onSelect={preview ? () => {} : onSeatSelect}
                                 />
                               );
                             })}
@@ -175,9 +187,10 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
                             {rowGroup.leftSeats.map((st) => {
                               const seatCode = `${rowGroup.row}${st.number.toString().padStart(2, '0')}`;
                               let currentStatus: SeatStatus = st.status;
-                              if (realtimeBooked.has(seatCode) || realtimeHeld.has(seatCode)) currentStatus = 'booked';
+                              if (realtimeHeld.has(seatCode)) currentStatus = 'held';
+                              if (realtimeBooked.has(seatCode)) currentStatus = 'booked';
                               const seatObj: Seat = { id: seatCode, row: rowGroup.row, number: st.number, category: section.name, price: section.price || 0, status: currentStatus };
-                              return <SeatItem key={seatObj.id} seat={seatObj} isSelected={selectedSeats.some((s) => s.id === seatObj.id)} onSelect={onSeatSelect} />;
+                              return <SeatItem key={seatObj.id} seat={seatObj} isSelected={selectedSeats.some((s) => s.id === seatObj.id)} onSelect={preview ? () => {} : onSeatSelect} />;
                             })}
                           </div>
                         )}
@@ -186,9 +199,10 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
                             {rowGroup.centerSeats.map((st) => {
                               const seatCode = `${rowGroup.row}${st.number.toString().padStart(2, '0')}`;
                               let currentStatus: SeatStatus = st.status;
-                              if (realtimeBooked.has(seatCode) || realtimeHeld.has(seatCode)) currentStatus = 'booked';
+                              if (realtimeHeld.has(seatCode)) currentStatus = 'held';
+                              if (realtimeBooked.has(seatCode)) currentStatus = 'booked';
                               const seatObj: Seat = { id: seatCode, row: rowGroup.row, number: st.number, category: section.name, price: section.price || 0, status: currentStatus };
-                              return <SeatItem key={seatObj.id} seat={seatObj} isSelected={selectedSeats.some((s) => s.id === seatObj.id)} onSelect={onSeatSelect} />;
+                              return <SeatItem key={seatObj.id} seat={seatObj} isSelected={selectedSeats.some((s) => s.id === seatObj.id)} onSelect={preview ? () => {} : onSeatSelect} />;
                             })}
                           </div>
                         )}
@@ -197,9 +211,10 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
                             {rowGroup.rightSeats.map((st) => {
                               const seatCode = `${rowGroup.row}${st.number.toString().padStart(2, '0')}`;
                               let currentStatus: SeatStatus = st.status;
-                              if (realtimeBooked.has(seatCode) || realtimeHeld.has(seatCode)) currentStatus = 'booked';
+                              if (realtimeHeld.has(seatCode)) currentStatus = 'held';
+                              if (realtimeBooked.has(seatCode)) currentStatus = 'booked';
                               const seatObj: Seat = { id: seatCode, row: rowGroup.row, number: st.number, category: section.name, price: section.price || 0, status: currentStatus };
-                              return <SeatItem key={seatObj.id} seat={seatObj} isSelected={selectedSeats.some((s) => s.id === seatObj.id)} onSelect={onSeatSelect} />;
+                              return <SeatItem key={seatObj.id} seat={seatObj} isSelected={selectedSeats.some((s) => s.id === seatObj.id)} onSelect={preview ? () => {} : onSeatSelect} />;
                             })}
                           </div>
                         )}
@@ -216,6 +231,7 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
             </motion.div>
           );
         })}
+        </div>
       </div>
 
       {/* SCREEN AT THE ABSOLUTE BOTTOM (Requirements 4) */}
@@ -223,3 +239,6 @@ export function TheatreSeatMap({ layout, showId, selectedSeats, onSeatSelect, on
     </div>
   );
 }
+
+
+

@@ -13,7 +13,7 @@ function getSessionSecret(): string {
 
   if (!secret) {
     console.warn('[Admin Auth Config Warning] ADMIN_SESSION_SECRET is not configured.');
-    return 'fallback_ticketx_admin_secret_minimum_32_chars_long';
+    throw new Error('Admin session signing secret is not configured');
   }
   return secret;
 }
@@ -207,3 +207,4 @@ export function validateAdminAccessKey(providedKey: string): boolean {
   if (bufA.length !== bufB.length) return false;
   return crypto.timingSafeEqual(bufA, bufB);
 }
+

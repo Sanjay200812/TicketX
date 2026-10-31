@@ -62,7 +62,7 @@ function saveActivityDB(list: LoginEvent[]) {
   } catch {}
 }
 
-const memoryLoginEvents: LoginEvent[] = loadActivityDB();
+
 
 export async function recordLoginEvent(params: {
   uid: string;
@@ -105,3 +105,4 @@ export async function recordLoginEvent(params: {
 export function getRecentLoginEvents(count = 15): LoginEvent[] {
   return loadActivityDB().slice(0, count);
 }
+
