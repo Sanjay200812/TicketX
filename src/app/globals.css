@@ -1,0 +1,186 @@
+@import "tailwindcss";
+
+@theme {
+  --color-canvas: #0b0a09;
+  --color-panel: #141210;
+  --color-panel-2: #1c1a16;
+  --color-panel-3: #25221d;
+  --color-line: rgb(243 237 228 / 0.09);
+  --color-line-strong: rgb(243 237 228 / 0.18);
+  --color-cream: #f3ede4;
+  --color-muted: #a59c8e;
+  --color-faint: #6f685d;
+  --color-marquee: #ef4a33;
+  --color-marquee-deep: #c7361f;
+  --color-ok: #57b56f;
+  --color-warn: #e3a63c;
+  --color-low: #ea5a43;
+  --color-gold: #e8c26a;
+
+  --font-sans: var(--font-ui), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-serif), Georgia, serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    background: var(--color-canvas);
+    color: var(--color-cream);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+  ::selection {
+    background: rgb(239 74 51 / 0.35);
+    color: #fff;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-marquee);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+}
+
+/* Film grain used on poster art and hero */
+.grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.22;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(243 237 228 / 0.12);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Ticket stub perforation */
+.perforation {
+  background-image: radial-gradient(circle at 6px 50%, var(--color-canvas) 5px, transparent 5.5px);
+  background-size: 14px 12px;
+  background-repeat: repeat-x;
+}
+
+/* Cinema screen curve */
+.screen-curve {
+  height: 34px;
+  border-top: 3px solid rgb(243 237 228 / 0.55);
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  background: linear-gradient(to bottom, rgb(243 237 228 / 0.08), transparent 80%);
+  box-shadow: 0 -12px 40px -8px rgb(243 237 228 / 0.18);
+}
+
+@keyframes shimmer {
+  from { background-position: -400px 0; }
+  to { background-position: 400px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #171512 0px, #211e19 120px, #171512 240px);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+/* ---------- View transitions ---------- */
+:root {
+  --vt-exit: 160ms;
+  --vt-enter: 260ms;
+  --vt-move: 420ms;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 220ms;
+}
+
+::view-transition-group(.morph) {
+  animation-duration: var(--vt-move);
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+::view-transition-image-pair(.morph) {
+  animation-name: vt-blur;
+}
+@keyframes vt-blur {
+  40% { filter: blur(2px); }
+}
+
+::view-transition-old(.nav-forward) {
+  animation: var(--vt-exit) ease-in both vt-fade-out, var(--vt-move) cubic-bezier(0.22, 1, 0.36, 1) both vt-to-left;
+}
+::view-transition-new(.nav-forward) {
+  animation: var(--vt-enter) ease-out var(--vt-exit) both vt-fade-in, var(--vt-move) cubic-bezier(0.22, 1, 0.36, 1) both vt-from-right;
+}
+::view-transition-old(.nav-back) {
+  animation: var(--vt-exit) ease-in both vt-fade-out, var(--vt-move) cubic-bezier(0.22, 1, 0.36, 1) both vt-to-right;
+}
+::view-transition-new(.nav-back) {
+  animation: var(--vt-enter) ease-out var(--vt-exit) both vt-fade-in, var(--vt-move) cubic-bezier(0.22, 1, 0.36, 1) both vt-from-left;
+}
+::view-transition-old(.page-fade) {
+  animation: var(--vt-exit) ease-in both vt-fade-out;
+}
+::view-transition-new(.page-fade) {
+  animation: var(--vt-enter) ease-out both vt-fade-in, var(--vt-move) cubic-bezier(0.22, 1, 0.36, 1) both vt-rise;
+}
+
+@keyframes vt-fade-out { to { opacity: 0; } }
+@keyframes vt-fade-in { from { opacity: 0; } }
+@keyframes vt-to-left { to { transform: translateX(-48px); } }
+@keyframes vt-from-right { from { transform: translateX(48px); } }
+@keyframes vt-to-right { to { transform: translateX(48px); } }
+@keyframes vt-from-left { from { transform: translateX(-48px); } }
+@keyframes vt-rise { from { transform: translateY(14px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.field {
+  @apply h-11 w-full rounded-lg border border-line-strong bg-canvas px-3 text-sm text-cream outline-none transition-colors placeholder:text-faint focus:border-cream;
+}
+
+/* CSS-only entrance: runs before hydration, so content never waits on JavaScript to appear */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(12px); }
+}
+.rise-in {
+  animation: rise-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
