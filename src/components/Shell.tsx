@@ -7,6 +7,7 @@ import clsx from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronDown, Clapperboard, Film, Home, MapPin, Search, Ticket, User as UserIcon, X, CheckCircle2, AlertCircle, Info } from 'lucide-react';
 import { useTicketX, useArea } from '@/context/TicketXContext';
+import { useCatalog } from '@/context/CatalogContext';
 
 export function Logo({ className }: { className?: string }) {
   return (
@@ -36,7 +37,8 @@ const NAV = [
 export function Header() {
   const pathname = usePathname();
   const area = useArea();
-  const { openCityPicker, setSearchOpen, user, requireSignIn } = useTicketX();
+  const { city } = useCatalog();
+  const { openCityPicker, setSearchOpen, user, requireSignIn, switchingCity, area: chosenArea } = useTicketX();
   const [scrolled, setScrolled] = useState(false);
   const inBooking = pathname.startsWith('/book');
 
@@ -77,8 +79,9 @@ export function Header() {
           onClick={() => openCityPicker(true)}
           className="ml-1 hidden items-center gap-1 rounded-md px-2 py-1 text-sm text-muted transition-colors hover:text-cream sm:flex"
         >
-          <MapPin size={14} />
-          <span className="max-w-[160px] truncate font-medium">{area.name}</span>
+          <MapPin size={14} className={switchingCity ? 'animate-pulse text-marquee' : ''} />
+          <span className="font-semibold text-cream">{city.name}</span>
+          {chosenArea && <span className="hidden max-w-[150px] truncate lg:inline">· {area.name}</span>}
           <ChevronDown size={14} />
         </button>
 
@@ -154,8 +157,9 @@ export function MobileNav() {
   );
 }
 
-export function Footer({ source }: { source: 'tmdb' | 'district' }) {
+export function Footer() {
   const pathname = usePathname();
+  const { city, fetchedAt } = useCatalog();
   if (pathname.startsWith('/book')) return null;
   return (
     <footer className="mt-24 border-t border-line pb-24 md:pb-10">
@@ -163,7 +167,7 @@ export function Footer({ source }: { source: 'tmdb' | 'district' }) {
         <div>
           <Logo />
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">
-            Films now playing in Hyderabad, showtimes at the city's cinemas, and a 3D view from your seat before you book.
+            Films now playing in {city.name}, real showtimes at the city&apos;s cinemas, and a 3D view from your seat before you book.
           </p>
         </div>
         {[
@@ -188,10 +192,8 @@ export function Footer({ source }: { source: 'tmdb' | 'district' }) {
       <div className="mx-auto mt-12 flex max-w-7xl flex-col gap-2 border-t border-line px-4 pt-6 text-xs text-faint sm:flex-row sm:justify-between sm:px-6">
         <span>© {new Date().getFullYear()} TicketX. Ticket prices include GST. Convenience fee is charged per ticket.</span>
         <span className="max-w-xl sm:text-right">
-          {source === 'tmdb'
-            ? 'Film data and images from TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB.'
-            : 'Film listings, posters and trailers as listed for Hyderabad on District and BookMyShow. TicketX is not affiliated with either.'}{' '}
-          Showtimes, prices and seat availability are simulated; bookings are a demo.
+          Films, posters, showtimes, screens and seat prices as listed on District (updated {new Date(fetchedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}). TicketX is
+          not affiliated with District or BookMyShow. Seat positions are laid out from each class&apos;s seat count; bookings are a demo.
         </span>
       </div>
     </footer>

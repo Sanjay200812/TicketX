@@ -5,49 +5,78 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import clsx from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowRight, Clapperboard, Film, Loader2, LocateFixed, MapPin, Search, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Clapperboard, Film, Loader2, LocateFixed, MapPin, Search, X } from 'lucide-react';
 import { useTicketX, useArea, useCinemas } from '@/context/TicketXContext';
 import { useCatalog } from '@/context/CatalogContext';
-import { AREAS, DEFAULT_AREA } from '@/lib/catalog';
+import { distanceKm } from '@/lib/catalog';
+import { CITIES, cityCentre, getCity } from '@/lib/cities';
+import type { Area } from '@/lib/types';
 import { Button, Modal } from './ui';
 import { Poster } from './Poster';
 
-/* ---------------- Area picker ---------------- */
+/* ---------------- City & area picker ---------------- */
 export function CityPicker() {
-  const { cityPickerOpen, openCityPicker, setArea, area, toast } = useTicketX();
+  const { cityPickerOpen, openCityPicker, setCity, area, toast, switchingCity } = useTicketX();
+  const { city: current } = useCatalog();
+  const [step, setStep] = useState<'city' | 'area'>('city');
+  const [cityId, setCityId] = useState(current.id);
   const [q, setQ] = useState('');
   const [locating, setLocating] = useState(false);
-  const list = AREAS.filter((c) => c.name.toLowerCase().includes(q.toLowerCase()));
-  const close = () => {
-    if (!area) setArea(DEFAULT_AREA);
+  const city = getCity(cityId);
+
+  // Returning users land on their city's areas; first-time visitors choose a city first
+  useEffect(() => {
+    if (!cityPickerOpen) return;
+    setCityId(current.id);
+    setStep(area ? 'area' : 'city');
+    setQ('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cityPickerOpen]);
+
+  const pickCity = (id: string) => {
+    setCityId(id);
+    setQ('');
+    setStep('area');
+    setCity(id);
+  };
+  const pickArea = (a: Area) => {
+    setCity(cityId, a);
     openCityPicker(false);
   };
+  const close = () => {
+    if (!area) setCity(current.id, cityCentre(current));
+    openCityPicker(false);
+  };
+
   const locate = () => {
     if (!navigator.geolocation) return toast('Location is not available in this browser', 'error');
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setLocating(false);
-        const { latitude: lat, longitude: lng } = pos.coords;
-        // Outside Hyderabad: distances would be meaningless, so fall back to the nearest listed area
-        const inCity = lat > 17.2 && lat < 17.65 && lng > 78.2 && lng < 78.75;
-        if (!inCity) {
-          toast("You seem to be outside Hyderabad. Pick an area instead.", 'info');
+        const here = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        const nearest = CITIES.map((c) => ({ c, d: distanceKm(here, c) })).sort((a, b) => a.d - b.d)[0];
+        if (nearest.d > 90) {
+          toast(`No listed city near you yet. The nearest is ${nearest.c.name}.`, 'info');
           return;
         }
-        setArea({ id: 'my-location', name: 'Your location', lat, lng });
+        setCity(nearest.c.id, { id: 'my-location', name: 'Your location', ...here });
         openCityPicker(false);
-        toast('Showing cinemas nearest to you', 'success');
+        toast(`Showing cinemas near you in ${nearest.c.name}`, 'success');
       },
       () => {
         setLocating(false);
-        toast('Location permission was denied. Pick an area instead.', 'error');
+        toast('Location permission was denied. Pick a city instead.', 'error');
       },
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 600000 },
     );
   };
+
+  const cities = CITIES.filter((c) => `${c.name} ${c.state}`.toLowerCase().includes(q.toLowerCase()));
+  const areas = city.areas.filter((a) => a.name.toLowerCase().includes(q.toLowerCase()));
+
   return (
-    <Modal open={cityPickerOpen} onClose={close} title="Where in Hyderabad are you?" labelledBy="city-title" width="max-w-lg">
+    <Modal open={cityPickerOpen} onClose={close} title={step === 'city' ? 'Choose your city' : `Where in ${city.name}?`} labelledBy="city-title" width="max-w-xl">
       <div className="p-5">
         <button
           onClick={locate}
@@ -57,33 +86,91 @@ export function CityPicker() {
           {locating ? <Loader2 size={18} className="animate-spin text-marquee" /> : <LocateFixed size={18} className="text-marquee" />}
           <span>
             <span className="block text-sm font-semibold">{locating ? 'Finding you…' : 'Use my current location'}</span>
-            <span className="block text-xs text-muted">Sort cinemas by real distance from where you are</span>
+            <span className="block text-xs text-muted">Picks your city and sorts cinemas by real distance</span>
           </span>
         </button>
+
         <div className="mt-4 flex h-11 items-center gap-2 rounded-lg border border-line-strong bg-canvas px-3">
           <Search size={16} className="text-faint" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search your area" className="w-full bg-transparent text-sm outline-none placeholder:text-faint" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={step === 'city' ? 'Search city' : `Search area in ${city.name}`}
+            className="w-full bg-transparent text-sm outline-none placeholder:text-faint"
+          />
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {list.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => {
-                setArea(c);
-                openCityPicker(false);
-              }}
-              className={clsx(
-                'flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-[13px] font-medium transition-colors',
-                area?.id === c.id ? 'border-marquee bg-marquee/10' : 'border-line hover:border-line-strong hover:bg-white/[0.02]',
-              )}
+
+        <AnimatePresence mode="wait" initial={false}>
+          {step === 'city' ? (
+            <motion.div
+              key="cities"
+              initial={{ opacity: 0, x: -16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -16 }}
+              transition={{ duration: 0.18 }}
+              className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3"
             >
-              <MapPin size={13} className="shrink-0 text-faint" />
-              <span className="truncate">{c.name}</span>
-            </button>
-          ))}
-          {list.length === 0 && <p className="col-span-full py-6 text-center text-sm text-muted">No area matches “{q}”.</p>}
-        </div>
-        <p className="mt-4 text-[11.5px] text-faint">TicketX currently covers Hyderabad.</p>
+              {cities.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => pickCity(c.id)}
+                  className={clsx(
+                    'group relative overflow-hidden rounded-xl border px-3.5 py-3 text-left transition-all duration-200 hover:-translate-y-0.5',
+                    c.id === current.id ? 'border-marquee bg-marquee/10' : 'border-line bg-panel-2/40 hover:border-line-strong',
+                  )}
+                >
+                  <span className="pointer-events-none absolute -right-1 -top-3 font-display text-5xl text-white/[0.05] transition-colors group-hover:text-marquee/15">
+                    {c.name.charAt(0)}
+                  </span>
+                  <span className="relative block text-[14px] font-semibold">{c.name}</span>
+                  <span className="relative block text-[11.5px] text-faint">{c.state}</span>
+                </button>
+              ))}
+              {cities.length === 0 && <p className="col-span-full py-6 text-center text-sm text-muted">No city matches “{q}”.</p>}
+            </motion.div>
+          ) : (
+            <motion.div key={`areas-${city.id}`} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} transition={{ duration: 0.18 }}>
+              <div className="mt-4 flex items-center justify-between text-xs">
+                <button
+                  onClick={() => {
+                    setStep('city');
+                    setQ('');
+                  }}
+                  className="inline-flex items-center gap-1 font-medium text-marquee hover:underline"
+                >
+                  <ArrowLeft size={13} /> All cities
+                </button>
+                {switchingCity && (
+                  <span className="inline-flex items-center gap-1.5 text-faint">
+                    <Loader2 size={12} className="animate-spin" /> Loading {city.name} showtimes
+                  </span>
+                )}
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <button
+                  onClick={() => pickArea(cityCentre(city))}
+                  className="col-span-full flex items-center gap-2 rounded-lg border border-line px-3 py-2.5 text-left text-[13px] font-medium transition-colors hover:border-line-strong hover:bg-white/[0.02]"
+                >
+                  <MapPin size={13} className="shrink-0 text-marquee" /> Anywhere in {city.name}
+                </button>
+                {areas.map((a) => (
+                  <button
+                    key={a.id}
+                    onClick={() => pickArea(a)}
+                    className={clsx(
+                      'flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-[13px] font-medium transition-colors',
+                      area?.id === a.id ? 'border-marquee bg-marquee/10' : 'border-line hover:border-line-strong hover:bg-white/[0.02]',
+                    )}
+                  >
+                    <MapPin size={13} className="shrink-0 text-faint" />
+                    <span className="truncate">{a.name}</span>
+                  </button>
+                ))}
+                {areas.length === 0 && <p className="col-span-full py-6 text-center text-sm text-muted">No area matches “{q}”.</p>}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </Modal>
   );

@@ -11,12 +11,11 @@ import { Page } from '@/components/Page';
 import { Poster } from '@/components/Poster';
 import { Button, Modal } from '@/components/ui';
 import { useCatalog } from '@/context/CatalogContext';
-import { getCinema, getSnack } from '@/lib/catalog';
 import { showDateTime } from '@/lib/shows';
 import { inr, longDate, runtime, time12 } from '@/lib/format';
 import { useNow } from '@/lib/hooks';
 import { useTicketX } from '@/context/TicketXContext';
-import type { Booking } from '@/lib/types';
+import type { Booking, Movie, Cinema } from '@/lib/types';
 
 export default function TicketPage() {
   return (
@@ -45,14 +44,27 @@ function Ticket() {
         </div>
       </Page>
     );
-  return <TicketView booking={booking} fresh={fresh} />;
+  return <TicketGate booking={booking} fresh={fresh} />;
 }
 
-function TicketView({ booking, fresh }: { booking: Booking; fresh: boolean }) {
-  const { getMovie } = useCatalog();
-  // A film can leave the live catalogue after booking, so the booking keeps its own copy
-  const movie = (getMovie(booking.movieId) ?? booking.movie)!;
-  const cinema = getCinema(booking.cinemaId)!;
+/** Bookings keep a copy of the film and cinema, so tickets still open after the city or listings change */
+function TicketGate({ booking, fresh }: { booking: Booking; fresh: boolean }) {
+  const { getMovie, cinemas } = useCatalog();
+  const movie = getMovie(booking.movieId) ?? booking.movie;
+  const cinema = booking.cinema ?? cinemas.find((c) => c.id === booking.cinemaId);
+  if (!movie || !cinema)
+    return (
+      <Page>
+        <div className="mx-auto max-w-md px-4 py-32 text-center">
+          <h1 className="text-2xl font-semibold">This ticket can&apos;t be shown</h1>
+          <p className="mt-2 text-sm text-muted">It was booked with an older version of TicketX.</p>
+        </div>
+      </Page>
+    );
+  return <TicketView booking={booking} fresh={fresh} movie={movie} cinema={cinema} />;
+}
+
+function TicketView({ booking, fresh, movie, cinema }: { booking: Booking; fresh: boolean; movie: Movie; cinema: Cinema }) {
   const { cancelBooking, toast, draft, setDraft } = useTicketX();
   const now = useNow();
 
@@ -77,7 +89,7 @@ function TicketView({ booking, fresh }: { booking: Booking; fresh: boolean }) {
   const cancelled = booking.status === 'cancelled';
   const over = now !== null && now > start + movie.runtime * 60000;
   const canCancel = !cancelled && cinema.cancellable && now !== null && start - now > 2 * 3600 * 1000;
-  const refund = booking.ticketTotal + booking.snackTotal - booking.discount;
+  const refund = booking.ticketTotal + (booking.snackTotal ?? 0) - booking.discount;
   const pickup = booking.id.slice(-4);
 
   const addToCalendar = () => {
@@ -220,7 +232,7 @@ function TicketView({ booking, fresh }: { booking: Booking; fresh: boolean }) {
                   <div className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-canvas/50">Booking ID</div>
                   <div className="font-mono text-sm font-semibold tracking-wider">{booking.id}</div>
                 </div>
-                {booking.snacks.length > 0 && (
+                {(booking.snacks?.length ?? 0) > 0 && (
                   <div>
                     <div className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-canvas/50">F&B pickup code</div>
                     <div className="font-mono text-sm font-semibold tracking-wider">{pickup}</div>
@@ -275,9 +287,7 @@ function TicketView({ booking, fresh }: { booking: Booking; fresh: boolean }) {
           <h3 className="border-b border-line px-5 py-4 text-sm font-semibold">Payment summary</h3>
           <div className="space-y-2.5 px-5 py-4 text-sm">
             <Row k={`Tickets (${booking.seats.length})`} v={inr(booking.ticketTotal)} />
-            {booking.snacks.map((s) => (
-              <Row key={s.id} k={`${s.qty} × ${getSnack(s.id)?.name ?? s.id}`} v={inr(s.price * s.qty)} />
-            ))}
+            {(booking.snackTotal ?? 0) > 0 && <Row k="Food & beverages" v={inr(booking.snackTotal ?? 0)} />}
             <Row k="Convenience fee (incl. GST)" v={inr(booking.convenienceFee + booking.gstOnFee, 2)} />
             {booking.discount > 0 && <Row k={`Discount (${booking.promo})`} v={`−${inr(booking.discount)}`} tone="text-ok" />}
           </div>

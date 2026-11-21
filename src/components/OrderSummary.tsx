@@ -7,7 +7,6 @@ import { ChevronDown } from 'lucide-react';
 import type { Cinema, Movie, Show } from '@/lib/types';
 import type { PriceResult } from '@/lib/format';
 import { inr, shortDate, time12 } from '@/lib/format';
-import { getSnack } from '@/lib/catalog';
 import { Poster } from './Poster';
 import { CONVENIENCE_FEE_PER_TICKET } from '@/lib/catalog';
 
@@ -16,20 +15,17 @@ export function OrderSummary({
   cinema,
   show,
   seats,
-  snacks,
   price,
   className,
 }: {
   movie: Movie;
   cinema: Cinema;
   show: Show;
-  seats: { id: string; tierId: string; price: number }[];
-  snacks: Record<string, number>;
+  seats: { id: string; tierId: string; price: number; label?: string }[];
   price: PriceResult;
   className?: string;
 }) {
   const [feeOpen, setFeeOpen] = useState(false);
-  const snackLines = Object.entries(snacks).filter(([, q]) => q > 0);
   const tiers = Array.from(new Set(seats.map((s) => s.tierId)));
 
   return (
@@ -58,23 +54,12 @@ export function OrderSummary({
             <span>
               {seats.length} × Ticket{seats.length > 1 ? 's' : ''}
               <span className="block text-xs text-faint">
-                {tiers.map((t) => seats.filter((s) => s.tierId === t).map((s) => s.id).join(', ')).join(' · ')}
+                {tiers.map((t) => { const ss = seats.filter((s) => s.tierId === t); return `${ss[0]?.label ? ss[0].label + ': ' : ''}${ss.map((s) => s.id).join(', ')}`; }).join(' · ')}
               </span>
             </span>
           }
           value={inr(price.ticketTotal)}
         />
-        <AnimatePresence initial={false}>
-          {snackLines.map(([id, q]) => {
-            const s = getSnack(id);
-            if (!s) return null;
-            return (
-              <motion.div key={id} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                <Line label={`${q} × ${s.name}`} value={inr(s.price * q)} />
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
         <div>
           <button onClick={() => setFeeOpen(!feeOpen)} className="flex w-full items-center justify-between text-left text-muted hover:text-cream">
             <span className="inline-flex items-center gap-1">

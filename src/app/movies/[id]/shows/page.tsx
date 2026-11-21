@@ -5,12 +5,12 @@ import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import clsx from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowLeft, ChevronDown, Heart, Info, MapPin, Search, SlidersHorizontal, Utensils, X } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Heart, Info, MapPin, Search, SlidersHorizontal, Armchair, X } from 'lucide-react';
 import { Page } from '@/components/Page';
 import { DateStrip } from '@/components/DateStrip';
 import { AvailabilityLegend, ShowtimeChip } from '@/components/ShowtimeChip';
 import { CertBadge, Chip, Dot } from '@/components/ui';
-import { showsForMovie, upcomingDates } from '@/lib/shows';
+import { datesForMovie, showsForMovie } from '@/lib/shows';
 import { useCatalog } from '@/context/CatalogContext';
 import { runtime, timeBand } from '@/lib/format';
 import { isPast, useFavCinemas, useNow } from '@/lib/hooks';
@@ -35,15 +35,16 @@ export default function ShowsPage() {
 function Shows() {
   const { id } = useParams<{ id: string }>();
   const params = useSearchParams();
-  const { getMovie } = useCatalog();
+  const { getMovie, index, city } = useCatalog();
   const movie = getMovie(id);
   const area = useArea();
   const cinemas = useCinemas();
   const { openCityPicker } = useTicketX();
   const now = useNow();
   const { favs, toggle } = useFavCinemas();
-  const dates = useMemo(() => upcomingDates(7), []);
-  const [date, setDate] = useState(dates[0]);
+  const dates = useMemo(() => (movie ? datesForMovie(index, movie) : []), [index, movie]);
+  const [picked, setDate] = useState<string | null>(null);
+  const date = picked && dates.includes(picked) ? picked : dates[0];
   const [lang, setLang] = useState<Language | null>((params.get('lang') as Language) || null);
   const [format, setFormat] = useState<Format | null>((params.get('format') as Format) || null);
   const [bands, setBands] = useState<string[]>([]);
@@ -52,14 +53,14 @@ function Shows() {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const emptyDates = useMemo(
-    () => (movie ? dates.filter((d) => showsForMovie(movie, cinemas, d).length === 0) : dates),
-    [movie, dates, cinemas],
+    () => (movie ? dates.filter((d) => showsForMovie(index, movie, cinemas, d).length === 0) : dates),
+    [index, movie, dates, cinemas],
   );
 
   const groups = useMemo(() => {
     if (!movie) return [];
     const priceTest = PRICES.find((p) => p.id === price)?.test;
-    return showsForMovie(movie, cinemas, date)
+    return showsForMovie(index, movie, cinemas, date ?? dates[0])
       .filter((g) => !q || g.cinema.name.toLowerCase().includes(q.toLowerCase()))
       .map((g) => ({
         ...g,
@@ -73,7 +74,8 @@ function Shows() {
       }))
       .filter((g) => g.shows.length > 0)
       .sort((a, b) => Number(favs.includes(b.cinema.id)) - Number(favs.includes(a.cinema.id)) || a.cinema.distanceKm - b.cinema.distanceKm);
-  }, [movie, cinemas, date, lang, format, bands, price, q, favs]);
+  }, [index, movie, cinemas, date, dates, lang, format, bands, price, q, favs]);
+  const carried = groups.some((g) => g.shows.some((s) => !s.listed));
 
   if (!movie || movie.status !== 'now_showing') {
     return (
@@ -147,7 +149,7 @@ function Shows() {
             {runtime(movie.runtime)}
             <Dot />
             <button onClick={() => openCityPicker(true)} className="inline-flex items-center gap-1 hover:text-cream">
-              <MapPin size={13} /> Near {area.name} <ChevronDown size={12} />
+              <MapPin size={13} /> {city.name} · near {area.name} <ChevronDown size={12} />
             </button>
           </div>
         </div>
@@ -212,6 +214,12 @@ function Shows() {
                   className={clsx('grid gap-4 bg-panel p-5 md:grid-cols-[minmax(240px,320px)_1fr] md:gap-8', gi > 0 && 'border-t border-line')}
                 >
                   <div className="flex items-start gap-3">
+                    {cinema.logo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={cinema.logo} alt="" loading="lazy" className="h-9 w-9 shrink-0 rounded-full bg-white object-contain p-0.5" />
+                    ) : (
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-panel-3 text-xs font-semibold text-muted">{cinema.chain.slice(0, 2)}</span>
+                    )}
                     <button onClick={() => toggle(cinema.id)} aria-label={favs.includes(cinema.id) ? 'Remove favourite' : 'Mark favourite'} className="mt-0.5 text-faint hover:text-marquee">
                       <Heart size={16} className={favs.includes(cinema.id) ? 'fill-marquee text-marquee' : ''} />
                     </button>
@@ -221,9 +229,9 @@ function Shows() {
                       </Link>
                       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-faint">
                         <span>{cinema.distanceKm} km away</span>
-                        {cinema.amenities.includes('Food & Beverages') && (
+                        {cinema.amenities.includes('Recliners') && (
                           <span className="inline-flex items-center gap-1">
-                            <Utensils size={11} /> F&B
+                            <Armchair size={11} /> Recliners
                           </span>
                         )}
                         <span className={cinema.cancellable ? 'text-ok/80' : ''}>{cinema.cancellable ? 'Cancellation available' : 'Non-cancellable'}</span>
@@ -242,7 +250,11 @@ function Shows() {
         </AnimatePresence>
 
         <p className="mt-4 flex items-start gap-2 text-xs text-faint">
-          <Info size={13} className="mt-px shrink-0" /> Prices shown on hover include GST. A convenience fee of ₹28 + GST per ticket applies at checkout.
+          <Info size={13} className="mt-px shrink-0" />
+          <span>
+            Showtimes, screens and seat prices as listed on District.
+            {carried && " Cinemas haven't published this date yet, so times are carried forward from the latest listings and may change."} A convenience fee of ₹28 + GST per ticket applies at checkout.
+          </span>
         </p>
       </div>
 

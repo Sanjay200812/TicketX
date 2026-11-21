@@ -3,7 +3,9 @@ import { Anton, DM_Serif_Display, Instrument_Sans, Instrument_Serif, Oswald, Spa
 import './globals.css';
 import { TicketXProvider } from '@/context/TicketXContext';
 import { CatalogProvider } from '@/context/CatalogContext';
-import { getCatalog } from '@/lib/tmdb';
+import { cookies } from 'next/headers';
+import { getCityPayload } from '@/lib/data';
+import { CITY_COOKIE, DEFAULT_CITY } from '@/lib/cities';
 import { Footer, Header, MobileNav, Toasts } from '@/components/Shell';
 import { CityPicker, SearchOverlay, SignInModal, TrailerModal } from '@/components/Overlays';
 
@@ -17,7 +19,7 @@ const slab = Zilla_Slab({ subsets: ['latin'], weight: '700', variable: '--font-s
 
 export const metadata: Metadata = {
   title: { default: 'TicketX · Movie tickets, showtimes & seats', template: '%s · TicketX' },
-  description: 'Book movie tickets in Hyderabad. Real films now in cinemas, showtimes at AMB, Prasads, PVR, INOX and more, and a 3D seat picker.',
+  description: 'Book movie tickets in Hyderabad, Bengaluru, Chennai, Mumbai, Delhi NCR and more. Films now in cinemas, real showtimes and seat classes, and a 3D view from your seat.',
   icons: { icon: '/icon.svg' },
 };
 
@@ -29,7 +31,8 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const catalog = await getCatalog();
+  const cityId = (await cookies()).get(CITY_COOKIE)?.value ?? DEFAULT_CITY;
+  const payload = getCityPayload(cityId);
   return (
     <html
       lang="en"
@@ -37,11 +40,11 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       suppressHydrationWarning
     >
       <body className="flex min-h-screen flex-col bg-canvas text-cream antialiased" suppressHydrationWarning>
-        <CatalogProvider movies={catalog.movies} source={catalog.source}>
+        <CatalogProvider payload={payload}>
         <TicketXProvider>
           <Header />
           <main className="flex-1">{children}</main>
-          <Footer source={catalog.source} />
+          <Footer />
           <MobileNav />
           <CityPicker />
           <SignInModal />
