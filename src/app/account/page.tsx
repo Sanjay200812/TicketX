@@ -10,7 +10,6 @@ import { Page } from '@/components/Page';
 import { Poster } from '@/components/Poster';
 import { MovieCard } from '@/components/MovieCard';
 import { Button } from '@/components/ui';
-import { getCinema } from '@/lib/catalog';
 import { useCatalog } from '@/context/CatalogContext';
 import { showDateTime } from '@/lib/shows';
 import { inr, longDate, time12 } from '@/lib/format';
@@ -169,9 +168,9 @@ function Account() {
 }
 
 function BookingRow({ b, i }: { b: Booking; i: number }) {
-  const { getMovie } = useCatalog();
+  const { getMovie, cinemas } = useCatalog();
   const movie = getMovie(b.movieId) ?? b.movie;
-  const cinema = getCinema(b.cinemaId);
+  const cinema = b.cinema ?? cinemas.find((c) => c.id === b.cinemaId);
   if (!movie || !cinema) return null;
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>

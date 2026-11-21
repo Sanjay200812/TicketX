@@ -9,14 +9,16 @@ import { Page } from '@/components/Page';
 import { Chip } from '@/components/ui';
 import { useFavCinemas } from '@/lib/hooks';
 import { useArea, useCinemas, useTicketX } from '@/context/TicketXContext';
+import { useCatalog } from '@/context/CatalogContext';
 import type { Amenity } from '@/lib/types';
 
-const FILTERS: Amenity[] = ['Recliners', 'Dolby Atmos', '4K Laser', 'Wheelchair Access', 'Cancellation'];
+const FILTERS: Amenity[] = ['Recliners', 'Dolby Atmos', '4K', 'RGB Laser', 'Wheelchair Access', 'Parking', 'Metro Nearby'];
 
 export default function CinemasPage() {
   const area = useArea();
   const cinemas = useCinemas();
   const { openCityPicker } = useTicketX();
+  const { city } = useCatalog();
   const { favs, toggle } = useFavCinemas();
   const [q, setQ] = useState('');
   const [am, setAm] = useState<Amenity[]>([]);
@@ -31,9 +33,9 @@ export default function CinemasPage() {
   return (
     <Page>
       <div className="mx-auto max-w-5xl px-4 pt-8 sm:px-6">
-        <h1 className="text-3xl font-semibold tracking-tight">Cinemas in Hyderabad</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Cinemas in {city.name}</h1>
         <button onClick={() => openCityPicker(true)} className="mt-1 text-sm text-muted hover:text-cream">
-          Sorted by distance from {area.name} · <span className="text-marquee">change area</span>
+          {cinemas.length} cinemas · sorted by distance from {area.name} · <span className="text-marquee">change</span>
         </button>
 
         <div className="mt-6 flex h-11 items-center gap-2 rounded-lg border border-line-strong bg-panel px-3">
@@ -53,7 +55,13 @@ export default function CinemasPage() {
             {list.map((c) => (
               <motion.div key={c.id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.22 }}>
                 <div className="group flex items-start gap-4 rounded-xl border border-line bg-panel p-5 transition-colors hover:border-line-strong">
-                  <button onClick={() => toggle(c.id)} aria-label="Favourite" className="mt-0.5 text-faint hover:text-marquee">
+                  {c.logo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={c.logo} alt="" loading="lazy" className="h-11 w-11 shrink-0 rounded-full bg-white object-contain p-0.5" />
+                  ) : (
+                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-panel-3 text-sm font-semibold text-muted">{c.chain.slice(0, 2)}</span>
+                  )}
+                  <button onClick={() => toggle(c.id)} aria-label="Favourite" className="order-last mt-0.5 text-faint hover:text-marquee">
                     <Heart size={17} className={favs.includes(c.id) ? 'fill-marquee text-marquee' : ''} />
                   </button>
                   <Link href={`/cinemas/${c.id}`} transitionTypes={['nav-forward']} className="min-w-0 flex-1">
@@ -73,7 +81,7 @@ export default function CinemasPage() {
                     </div>
                     {c.highlight && <p className="mt-3 text-[13px] text-cream/75">{c.highlight}</p>}
                     <p className="mt-2 text-xs text-faint">
-                      {c.screens.length} screen{c.screens.length > 1 ? 's' : ''} · {Array.from(new Set(c.screens.flatMap((s) => s.formats))).join(', ')}
+                      {c.screens.length > 0 ? `${c.screens.length} screen${c.screens.length > 1 ? 's' : ''} · ${Array.from(new Set(c.screens.flatMap((s) => s.formats))).join(', ')}` : c.area}
                     </p>
                   </Link>
                 </div>

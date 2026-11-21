@@ -39,7 +39,13 @@ export function MovieCard({ movie, morph = true, className }: { movie: Movie; mo
                 <span className="text-cream/80">{compact(movie.interested)} interested</span>
               </>
             ) : (
-              <span className="text-cream/80">{movie.status === 'coming_soon' ? `In cinemas ${releaseLabel(movie.releaseDate)}` : 'New release'}</span>
+              <span className="text-cream/80">
+                {movie.status === 'coming_soon'
+                  ? `In cinemas ${releaseLabel(movie.releaseDate)}`
+                  : movie.advance && movie.firstShow
+                    ? `Advance booking · from ${releaseLabel(movie.firstShow).replace(/ \d{4}$/, '')}`
+                    : 'Now showing'}
+              </span>
             )}
           </div>
         </Tilt>

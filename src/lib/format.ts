@@ -1,6 +1,6 @@
-import { CONVENIENCE_FEE_PER_TICKET, GST_RATE, getSnack } from './catalog';
+import { CONVENIENCE_FEE_PER_TICKET, GST_RATE } from './catalog';
 import { parseDateKey } from './shows';
-import type { Format, Show } from './types';
+import type { Show } from './types';
 
 export const inr = (n: number, decimals = 0) =>
   '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
@@ -52,14 +52,12 @@ export function timeBand(t: string): 'Morning' | 'Afternoon' | 'Evening' | 'Nigh
 export type PriceInput = {
   show: Show;
   seats: { id: string; price: number }[];
-  snacks: Record<string, number>;
   promo?: string | null;
   firstBooking: boolean;
 };
 
 export type PriceResult = {
   ticketTotal: number;
-  snackTotal: number;
   convenienceFee: number;
   gstOnFee: number;
   discount: number;
@@ -68,11 +66,10 @@ export type PriceResult = {
   promoApplied?: string;
 };
 
-const PREMIUM: Format[] = ['IMAX 2D', '4DX'];
+const isPremium = (format: string) => /imax|4dx|mx4d/i.test(format);
 
-export function priceBooking({ show, seats, snacks, promo, firstBooking }: PriceInput): PriceResult {
+export function priceBooking({ show, seats, promo, firstBooking }: PriceInput): PriceResult {
   const ticketTotal = seats.reduce((a, s) => a + s.price, 0);
-  const snackTotal = Object.entries(snacks).reduce((a, [id, q]) => a + (getSnack(id)?.price ?? 0) * q, 0);
   const convenienceFee = seats.length * CONVENIENCE_FEE_PER_TICKET;
   const gstOnFee = Math.round(convenienceFee * GST_RATE * 100) / 100;
   let discount = 0;
@@ -93,13 +90,9 @@ export function priceBooking({ show, seats, snacks, promo, firstBooking }: Price
         else if (seats.length < 2) promoError = 'Book at least 2 tickets to use this code.';
         else discount = 100;
         break;
-      case 'SNACK50':
-        if (snackTotal < 250) promoError = 'Add food & beverages worth ₹250 or more.';
-        else discount = 50;
-        break;
       case 'MORNING':
         if (hour >= 12) promoError = 'Valid only for shows starting before 12:00 PM.';
-        else if (PREMIUM.includes(show.format)) promoError = 'Not valid on IMAX or 4DX shows.';
+        else if (isPremium(show.format)) promoError = 'Not valid on IMAX or 4DX shows.';
         else if (seats.length < 2) promoError = 'Book at least 2 tickets to use this code.';
         else discount = 60;
         break;
@@ -109,6 +102,6 @@ export function priceBooking({ show, seats, snacks, promo, firstBooking }: Price
     if (!promoError) promoApplied = code;
   }
 
-  const total = Math.round((ticketTotal + snackTotal + convenienceFee + gstOnFee - discount) * 100) / 100;
-  return { ticketTotal, snackTotal, convenienceFee, gstOnFee, discount, total, promoError, promoApplied };
+  const total = Math.round((ticketTotal + convenienceFee + gstOnFee - discount) * 100) / 100;
+  return { ticketTotal, convenienceFee, gstOnFee, discount, total, promoError, promoApplied };
 }

@@ -10,7 +10,7 @@ import { shortDate, time12 } from '@/lib/format';
 import { useTicketX } from '@/context/TicketXContext';
 import { CertBadge } from './ui';
 
-const STEPS = ['Seats', 'Food & drinks', 'Payment'] as const;
+const STEPS = ['Seats', 'Payment'] as const;
 
 export function BookingHeader({
   movie,
@@ -23,7 +23,7 @@ export function BookingHeader({
   movie: Movie;
   cinema: Cinema;
   show: Show;
-  step: 0 | 1 | 2;
+  step: 0 | 1;
   backHref: string;
   right?: React.ReactNode;
 }) {

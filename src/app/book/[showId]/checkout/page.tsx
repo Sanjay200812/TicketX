@@ -10,7 +10,7 @@ import { BookingHeader, HoldTimer } from '@/components/BookingChrome';
 import { OrderSummary } from '@/components/OrderSummary';
 import { Field } from '@/components/Overlays';
 import { Button } from '@/components/ui';
-import { OFFERS, getSnack } from '@/lib/catalog';
+import { OFFERS } from '@/lib/catalog';
 import { inr, priceBooking } from '@/lib/format';
 import { useBookingDraft } from '@/lib/useBookingDraft';
 import { useTicketX } from '@/context/TicketXContext';
@@ -36,7 +36,7 @@ export default function CheckoutPage() {
   const { showId } = useParams<{ showId: string }>();
   const router = useRouter();
   const { data, draft, ready } = useBookingDraft(showId);
-  const { user, requireSignIn, setDraft, addBooking, bookings, toast } = useTicketX();
+  const { user, requireSignIn, addBooking, bookings, toast } = useTicketX();
   const [contact, setContact] = useState({ name: '', phone: '', email: '' });
   const [code, setCode] = useState('');
   const [promo, setPromo] = useState<string | null>(null);
@@ -57,9 +57,9 @@ export default function CheckoutPage() {
   if (!ready || !data || !draft) return <div className="min-h-screen" />;
   const { show, movie, cinema } = data;
   const firstBooking = bookings.length === 0;
-  const price = priceBooking({ show, seats: draft.seats, snacks: draft.snacks, promo, firstBooking });
+  const price = priceBooking({ show, seats: draft.seats, promo, firstBooking });
   const promoState = promo ? (price.promoError ? { ok: false, msg: price.promoError } : { ok: true, msg: `${promo} applied — you save ${inr(price.discount)}` }) : null;
-  const effective = price.promoError ? priceBooking({ show, seats: draft.seats, snacks: draft.snacks, promo: null, firstBooking }) : price;
+  const effective = price.promoError ? priceBooking({ show, seats: draft.seats, promo: null, firstBooking }) : price;
 
   const pay = async () => {
     if (!user) return requireSignIn();
@@ -82,6 +82,8 @@ export default function CheckoutPage() {
       showId: show.id,
       movieId: movie.id,
       movie,
+      cinema,
+      city: show.city,
       cinemaId: cinema.id,
       date: show.date,
       time: show.time,
@@ -89,11 +91,7 @@ export default function CheckoutPage() {
       format: show.format,
       language: show.language,
       seats: draft.seats,
-      snacks: Object.entries(draft.snacks)
-        .filter(([, q]) => q > 0)
-        .map(([sid, qty]) => ({ id: sid, qty, price: getSnack(sid)?.price ?? 0 })),
       ticketTotal: effective.ticketTotal,
-      snackTotal: effective.snackTotal,
       convenienceFee: effective.convenienceFee,
       gstOnFee: effective.gstOnFee,
       discount: effective.discount,
@@ -112,7 +110,7 @@ export default function CheckoutPage() {
 
   return (
     <Page>
-      <BookingHeader movie={movie} cinema={cinema} show={show} step={2} backHref={cinema.amenities.includes('Food & Beverages') ? `/book/${show.id}/snacks` : `/book/${show.id}`} right={<HoldTimer showId={show.id} />} />
+      <BookingHeader movie={movie} cinema={cinema} show={show} step={1} backHref={`/book/${show.id}`} right={<HoldTimer showId={show.id} />} />
 
       <div className="mx-auto grid max-w-7xl gap-8 px-4 pb-16 pt-8 sm:px-6 lg:grid-cols-[1fr_400px]">
         <div className="space-y-6">
@@ -223,7 +221,7 @@ export default function CheckoutPage() {
         </div>
 
         <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
-          <OrderSummary movie={movie} cinema={cinema} show={show} seats={draft.seats} snacks={draft.snacks} price={effective} />
+          <OrderSummary movie={movie} cinema={cinema} show={show} seats={draft.seats} price={effective} />
           <label className="flex cursor-pointer items-start gap-3 text-[13px] leading-relaxed text-muted">
             <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="mt-1 h-4 w-4 accent-[#ef4a33]" />
             <span>

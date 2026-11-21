@@ -8,7 +8,7 @@ const FAQ = [
   ['When does the seat hold expire?', 'Seats are held for 8 minutes from the moment you leave the seat map. If payment is not completed by then, the seats are released.'],
   ['Why is there a convenience fee?', 'A fee of ₹28 + 18% GST per ticket covers payment processing and the online booking service. Ticket prices already include GST.'],
   ['Can I change my seats after booking?', 'Seats can’t be changed. Cancel the booking (where the cinema allows) and book again.'],
-  ['Is my food order cancelled with my tickets?', 'Yes. Food & beverages are refunded together with the tickets when a booking is cancelled.'],
+  ['How many tickets can I book at once?', 'Up to 10 tickets per booking, all in the same seat class.'],
   ['What ID do I need for an A-rated film?', 'Any government photo ID showing you are 18 or older. Entry may be refused without it, and the ticket is not refundable in that case.'],
 ];
 
@@ -37,7 +37,7 @@ export default function HelpPage() {
           <h2 className="text-lg font-semibold">Cancellation & refunds</h2>
           <ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-relaxed text-muted">
             <li>Bookings at participating cinemas can be cancelled up to 2 hours before the show starts.</li>
-            <li>The ticket amount and any food & beverages are refunded. The convenience fee is non-refundable.</li>
+            <li>The ticket amount is refunded. The convenience fee is non-refundable.</li>
             <li>Refunds reach the original payment method within 5–7 working days.</li>
             <li>Single-screen cinemas marked “Non-cancellable” don’t accept cancellations.</li>
           </ul>

@@ -1,24 +1,29 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import type { Area, Booking, Cinema, User } from '@/lib/types';
-import { AREAS, DEFAULT_AREA, cinemasNear } from '@/lib/catalog';
+import { sortByDistance } from '@/lib/catalog';
+import { CITY_COOKIE, cityCentre } from '@/lib/cities';
+import { useCatalog } from './CatalogContext';
 
 export type Toast = { id: string; message: string; tone?: 'info' | 'success' | 'error' };
 
 export type Draft = {
   showId: string;
-  seats: { id: string; tierId: string; price: number }[];
-  snacks: Record<string, number>;
+  seats: { id: string; tierId: string; price: number; label?: string }[];
   holdUntil: number | null;
   promo: string | null;
 };
 
 type Ctx = {
   hydrated: boolean;
-  /** The user's chosen area in Hyderabad (or their GPS location); null until chosen */
+  /** The user's chosen area in the current city (or their GPS location); null until chosen */
   area: Area | null;
   setArea: (a: Area) => void;
+  /** Switches city: reloads that city's films, cinemas and showtimes */
+  setCity: (cityId: string, area?: Area) => void;
+  switchingCity: boolean;
   cityPickerOpen: boolean;
   openCityPicker: (open: boolean) => void;
 
@@ -71,9 +76,15 @@ function write(storage: 'local' | 'session', key: string, value: unknown) {
   }
 }
 
+type StoredArea = Area & { city: string };
+
 export function TicketXProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const { city } = useCatalog();
+  const [switchingCity, startSwitch] = useTransition();
   const [hydrated, setHydrated] = useState(false);
-  const [area, setAreaState] = useState<Area | null>(null);
+  const [storedArea, setStoredArea] = useState<StoredArea | null>(null);
+  const area: Area | null = storedArea && storedArea.city === city.id ? storedArea : null;
   const [cityPickerOpen, openCityPicker] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [signInOpen, setSignInOpen] = useState(false);
@@ -86,8 +97,8 @@ export function TicketXProvider({ children }: { children: React.ReactNode }) {
   const [trailerFor, playTrailer] = useState<string | null>(null);
 
   useEffect(() => {
-    const c = read<Area | null>('local', 'tx.area', null);
-    setAreaState(c && typeof c.lat === 'number' ? c : null);
+    const c = read<StoredArea | null>('local', 'tx.area', null);
+    setStoredArea(c && typeof c.lat === 'number' && c.city ? c : null);
     setUser(read('local', 'tx.user', null));
     setWatchlist(read('local', 'tx.watchlist', []));
     setBookings(read('local', 'tx.bookings', []));
@@ -95,10 +106,28 @@ export function TicketXProvider({ children }: { children: React.ReactNode }) {
     setHydrated(true);
   }, []);
 
-  const setArea = useCallback((a: Area) => {
-    setAreaState(a);
-    write('local', 'tx.area', a);
-  }, []);
+  const setArea = useCallback(
+    (a: Area) => {
+      const v = { ...a, city: city.id };
+      setStoredArea(v);
+      write('local', 'tx.area', v);
+    },
+    [city.id],
+  );
+
+  const setCity = useCallback(
+    (cityId: string, a?: Area) => {
+      if (a) {
+        const v = { ...a, city: cityId };
+        setStoredArea(v);
+        write('local', 'tx.area', v);
+      }
+      if (cityId === city.id) return;
+      document.cookie = `${CITY_COOKIE}=${cityId}; path=/; max-age=31536000; samesite=lax`;
+      startSwitch(() => router.refresh());
+    },
+    [city.id, router],
+  );
 
   const toast = useCallback((message: string, tone: Toast['tone'] = 'info') => {
     const id = Math.random().toString(36).slice(2);
@@ -177,6 +206,8 @@ export function TicketXProvider({ children }: { children: React.ReactNode }) {
       hydrated,
       area,
       setArea,
+      setCity,
+      switchingCity,
       cityPickerOpen,
       openCityPicker,
       user,
@@ -200,7 +231,7 @@ export function TicketXProvider({ children }: { children: React.ReactNode }) {
       trailerFor,
       playTrailer,
     }),
-    [hydrated, area, setArea, cityPickerOpen, user, signIn, signOut, signInOpen, requireSignIn, closeSignIn, watchlist, toggleWatch, bookings, addBooking, cancelBooking, draft, setDraft, toasts, toast, dismissToast, searchOpen, trailerFor],
+    [hydrated, area, setArea, setCity, switchingCity, cityPickerOpen, user, signIn, signOut, signInOpen, requireSignIn, closeSignIn, watchlist, toggleWatch, bookings, addBooking, cancelBooking, draft, setDraft, toasts, toast, dismissToast, searchOpen, trailerFor],
   );
 
   return <TicketXContext.Provider value={value}>{children}</TicketXContext.Provider>;
@@ -212,15 +243,15 @@ export function useTicketX() {
   return ctx;
 }
 
-/** The user's area, defaulting to Gachibowli until they choose one. */
+/** The user's area, defaulting to the city centre until they choose one. */
 export function useArea(): Area {
-  return useTicketX().area ?? DEFAULT_AREA;
+  const { city } = useCatalog();
+  return useTicketX().area ?? cityCentre(city);
 }
 
-/** Hyderabad cinemas sorted by distance from the user's area. */
+/** The city's cinemas sorted by distance from the user's area. */
 export function useCinemas(): Cinema[] {
   const area = useArea();
-  return useMemo(() => cinemasNear(area), [area]);
+  const { cinemas } = useCatalog();
+  return useMemo(() => sortByDistance(cinemas, area), [cinemas, area]);
 }
-
-export { AREAS };

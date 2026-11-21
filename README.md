@@ -1,6 +1,6 @@
 # TicketX
 
-A movie-ticket booking site for Hyderabad. It shows real films now in cinemas from TMDB, real Hyderabad theatres, and a 3D auditorium for picking seats. Built with Next.js 16, React 19, Tailwind CSS 4, framer-motion and React Three Fiber.
+A movie-ticket booking site for 11 Indian cities. It shows the films actually running, at the real cinemas with their real showtimes, screens and seat classes. Seats are picked on a District / BookMyShow-style seat map, with a 3D view of the auditorium as an option. Built with Next.js 16, React 19, Tailwind CSS 4, framer-motion and React Three Fiber.
 
 ## Run
 
@@ -11,28 +11,45 @@ npm run dev
 
 Open http://localhost:3000.
 
-## Films
+## Cities
 
-By default the site shows the films listed for Hyderabad on District and BookMyShow: 21 now showing and 10 coming soon. Each has its poster, backdrop, CBFC certificate, runtime, cast photos, critic scores and the official trailer (the Telugu one when there is one). The data lives in `src/data/district.json`. To refresh it, run `node scripts/district-snapshot.cjs <district-slugs…>` with the movie slugs from district.in. Then edit `NOW_COUNT` in `src/lib/district.ts`.
+Hyderabad, Bengaluru, Chennai, Mumbai, Delhi NCR, Pune, Kolkata, Kochi, Visakhapatnam, Vijayawada and Guntur. Each city has 7–15 localities to choose from (`src/lib/cities.ts`). "Use my current location" picks the nearest city and sorts cinemas by real distance. The chosen city is kept in a cookie, so the server only sends that city's data.
 
-### Optional: live films from TMDB
+## Films, cinemas and showtimes
 
-1. Create a free account at themoviedb.org and get an API key under **Settings → API**.
-2. Copy `.env.local.example` to `.env.local` and paste the key into `TMDB_API_KEY` (or the v4 token into `TMDB_READ_ACCESS_TOKEN`).
-3. Restart `npm run dev`.
+All listings come from District's public movie pages and are snapshotted into `src/data`:
 
-The server fetches films releasing in India over the last ~6 weeks and the next ~10 weeks, weighted toward Telugu, Hindi, English and Tamil for a Hyderabad audience. It adds posters, backdrops, cast photos, crew, CBFC certificates and official YouTube trailers. Results are cached for an hour, and the key never reaches the browser. Without a key, the site runs on built-in demo films and says so in the footer.
+| File | Contents |
+| --- | --- |
+| `movies.json` | Every film: poster, backdrop, CBFC certificate, runtime, genres, cast with photos, critic scores, official trailer (the Telugu one when there is one) |
+| `cities/<city>.json` | That city's top films, every cinema showing them (name, address, coordinates, logo, facilities, cancellation policy) and two days of showtimes: auditorium, format, language, sound tag, and each seat class with its price, seat count and seats free |
+| `upcoming.json` | Films releasing soon |
 
-## Theatres
+To refresh, re-run the snapshot. It takes about a minute for all cities.
 
-`src/lib/catalog.ts` lists real Hyderabad cinemas: AMB Cinemas, Prasads (PCX), Allu Cinemas (Dolby Cinema), PVR Inorbit (IMAX), INOX GVK One, PVR Central, AAA Cinemas, single screens at RTC X Roads, and others. Premium formats come from public listings. Screen counts, seat plans and coordinates are approximations. Cinemas are sorted by distance from the area you choose, or from your GPS location.
+```bash
+node scripts/snapshot.cjs              # all cities + upcoming films
+node scripts/snapshot.cjs pune kochi   # just some cities
+node scripts/snapshot.cjs --upcoming   # just the upcoming list
+```
 
-Showtimes, prices and seat availability are simulated, since Indian chains don't offer a public showtime API. Checkout is a demo and collects no payment details.
+For dates after the snapshot, each film's busiest listed day is carried forward, and the showtimes page says so. Films that only have advance bookings show their real show dates.
 
-## 3D and motion
+## Booking
 
-- **3D auditorium** (`src/components/Auditorium3D.tsx`): stadium seating built from the seat plan, tier-coloured velvet and leather seats, and the film's backdrop on the screen. Tap seats in 3D. "View from seat" flies the camera to eye height at your seat. It renders on demand to save battery.
-- **Home carousel:** posters on a 3D arc with floor reflections; swipe, drag, click or use the arrow keys.
-- **Poster cards** tilt toward the cursor with a light glare (mouse devices only).
-- **E-ticket** flips in 3D to a full-size entry QR.
-- **Page transitions** use React `<ViewTransition>`: posters morph into the movie page, and forward and back navigation slides.
+- **Seats:** up to 10 per booking, all in one seat class. Tapping a seat fills the rest of your tickets to its right, as in the cinema apps.
+- **Seat map (default):** classes are stacked from the dearest at the back to the cheapest at the front, with the screen at the bottom. Each class keeps its listed seat count and price, and exactly the listed number of seats show as sold. Chains don't publish seat-by-seat plans, so row lengths and aisles are laid out from those counts.
+- **3D view:**
+  - the same plan as a stadium-seated auditorium, with one step per row and amber aisle step lights
+  - recliners with footrests, armrests, and rails between classes
+  - a curved screen showing the film's backdrop, a stage, acoustic wall panels, a projector beam and exit signs
+  - "View from seat" puts the camera at eye height in your seat
+- **Checkout:** a demo with promo codes. It collects no payment details. The e-ticket flips to an entry QR, and cancellations refund the ticket amount.
+
+## Motion
+
+- **Home carousel:** posters on a 3D arc with floor reflections.
+- **Poster cards:** tilt toward the cursor (mouse devices only).
+- **Page transitions:** React `<ViewTransition>` morphs posters into the movie page and slides on navigation.
+
+TicketX is not affiliated with District or BookMyShow.

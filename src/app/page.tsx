@@ -14,18 +14,22 @@ import { useArea, useCinemas, useTicketX } from '@/context/TicketXContext';
 import { useCatalog } from '@/context/CatalogContext';
 import type { Language } from '@/lib/types';
 
-const LANGS: (Language | 'All')[] = ['All', 'Telugu', 'Tamil', 'Hindi', 'English', 'Malayalam', 'Kannada'];
-
 export default function HomePage() {
   const area = useArea();
   const allCinemas = useCinemas();
   const { toast, openCityPicker, hydrated, area: chosenArea } = useTicketX();
-  // First visit: ask where in Hyderabad the user is, so cinemas sort by real distance
+  // First visit: ask which city and area the user is in, so cinemas sort by real distance
   useEffect(() => {
     if (hydrated && !chosenArea) openCityPicker(true);
   }, [hydrated, chosenArea, openCityPicker]);
-  const { featured, nowShowing: allNow, comingSoon, source } = useCatalog();
+  const { featured, nowShowing: allNow, comingSoon, city } = useCatalog();
   const [lang, setLang] = useState<Language | 'All'>('All');
+  // Language chips: the languages actually playing in this city, most common first
+  const LANGS = useMemo<(Language | 'All')[]>(() => {
+    const count = new Map<string, number>();
+    allNow.forEach((m) => m.languages.forEach((l) => count.set(l, (count.get(l) ?? 0) + 1)));
+    return ['All', ...[...count.entries()].sort((a, b) => b[1] - a[1]).map(([l]) => l).slice(0, 8)];
+  }, [allNow]);
   const nowShowing = useMemo(() => allNow.filter((m) => lang === 'All' || m.languages.includes(lang)), [lang, allNow]);
   const cinemas = allCinemas.slice(0, 4);
 
@@ -36,8 +40,8 @@ export default function HomePage() {
       <div className="mx-auto max-w-7xl space-y-16 px-4 pt-12 sm:px-6">
         <section>
           <SectionHeader
-            title="Now showing in Hyderabad"
-            sub={`${allNow.length} films in cinemas now${source === 'tmdb' ? ' · updated hourly' : ' · as listed on District and BookMyShow'}`}
+            title={`Now showing in ${city.name}`}
+            sub={`${allNow.length} films · ${allCinemas.length} cinemas · showtimes as listed on District`}
             action={
               <Link href="/movies" className="flex shrink-0 items-center gap-1 text-sm font-medium text-muted hover:text-cream">
                 See all <ArrowRight size={14} />

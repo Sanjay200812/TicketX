@@ -19,7 +19,7 @@ import { isPast, useFavCinemas, useNow } from '@/lib/hooks';
 export default function CinemaPage() {
   const { id } = useParams<{ id: string }>();
   const cinema = useCinemas().find((c) => c.id === id);
-  const { nowShowing } = useCatalog();
+  const { nowShowing, index } = useCatalog();
   const dates = useMemo(() => upcomingDates(7), []);
   const [date, setDate] = useState(dates[0]);
   const now = useNow();
@@ -37,7 +37,7 @@ export default function CinemaPage() {
       </Page>
     );
 
-  const groups = showsAtCinema(cinema, nowShowing, date);
+  const groups = showsAtCinema(index, cinema, nowShowing, date);
 
   return (
     <Page>
@@ -47,11 +47,21 @@ export default function CinemaPage() {
         </Link>
         <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight">{cinema.name}</h1>
+            <div className="flex items-center gap-3">
+              {cinema.logo && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={cinema.logo} alt="" className="h-12 w-12 shrink-0 rounded-full bg-white object-contain p-1" />
+              )}
+              <h1 className="text-3xl font-semibold tracking-tight">{cinema.name}</h1>
+            </div>
             <p className="mt-1 flex items-center gap-1 text-sm text-muted">
               <MapPin size={13} /> {cinema.address} · {cinema.distanceKm} km
             </p>
-            {cinema.highlight && <p className="mt-2 max-w-2xl text-sm text-cream/80">{cinema.highlight}</p>}
+            {cinema.screens.length > 0 && (
+              <p className="mt-2 max-w-2xl text-sm text-cream/80">
+                {cinema.screens.length} screen{cinema.screens.length > 1 ? 's' : ''}: {cinema.screens.map((s) => s.name).join(', ')}
+              </p>
+            )}
             <div className="mt-3 flex flex-wrap gap-1.5">
               {cinema.amenities.map((a) => (
                 <span key={a} className="rounded bg-white/[0.05] px-2 py-0.5 text-xs text-muted">
